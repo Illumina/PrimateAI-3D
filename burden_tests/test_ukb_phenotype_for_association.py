@@ -583,7 +583,6 @@ def main():
         original_ph_data = original_ph_data[~(original_ph_data[to_exclude] == 1).all(axis=1)]
         echo('Excluding samples with:', to_exclude, ', samples:', len(original_ph_data))
 
-    # is_binary = (len(set(original_ph_data[phenotype_name].dropna())) == 2)
     cols_to_keep = [SAMPLE_ID] + [c for c in list(original_ph_data) if c.startswith(phenotype_name)]
     if regress_out is not None:
         cols_to_keep += regress_out

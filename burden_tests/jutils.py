@@ -65,7 +65,6 @@ UNKNOWN_ENVIRONMENT = 'UNKNOWN_ENVIRONMENT'
 script_location = os.path.split(os.path.realpath(__file__))[0]
 
 if script_location.startswith(ROOT_PATH):
-    echo('Running on Foster City or UK cluster')
     UKB_DATA_PATH = ROOT_PATH + '/ukbiobank/data/'
     UKB_RARE_VARIANTS_PATH = ROOT_PATH + '/pfiziev/rare_variants/data/ukbiobank/'
     ROOT_PFIZIEV_PATH = ROOT_PATH + '/pfiziev/'
@@ -73,7 +72,6 @@ if script_location.startswith(ROOT_PATH):
     RUNNING_ON = USFC
 
 elif script_location.startswith(ROOT_PATH_SD):
-    echo('Running on San Diego cluster')
     UKB_DATA_PATH = ROOT_PATH_SD + '/pfiziev/ukbiobank/data/'
     UKB_RARE_VARIANTS_PATH = ROOT_PATH_SD + '/pfiziev/rare_variants/data/ukbiobank/'
     ROOT_PFIZIEV_PATH = ROOT_PATH_SD + '/pfiziev/'
@@ -81,7 +79,6 @@ elif script_location.startswith(ROOT_PATH_SD):
     RUNNING_ON = USSD
 
 elif os.path.exists(script_location + '/running_on') and ''.join(open(script_location + '/running_on', 'rt').readlines()).strip() == 'dnanexus':
-    echo('Running on DNANexus')
     UKB_DATA_PATH = ROOT_DNANEXUS + '/illumina/'
     UKB_RARE_VARIANTS_PATH = None
     ROOT_PFIZIEV_PATH = ROOT_DNANEXUS
@@ -96,10 +93,6 @@ else:
     echo('ERROR: Weird script path:', script_location, ', assuming script runs on Foster City cluster')
     BGEN_DIR = UKB_DATA_PATH + '/array_genotypes/'
     RUNNING_ON = UNKNOWN_ENVIRONMENT
-
-# from hypergeom import hypergeom
-
-
 
 def log_max_memory_usage():
 
@@ -131,15 +124,12 @@ def close_log():
     open_log.log_fname = None
 
 
-
 def echo_debug(*args, **kwargs):
     if echo_debug.on:
         echo(*args, **kwargs)
 
 
 echo_debug.on = False
-
-
 
 
 class _GZipFileWriter:
