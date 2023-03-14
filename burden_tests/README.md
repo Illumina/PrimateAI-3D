@@ -34,29 +34,41 @@ For each variant type, the results table contains the following columns (vtype i
 
 
 [f'ALL/{vtype}/carrier/pvalue/fdr_corr', # P-value for the association of the gene with the phenotype
+
  f'ALL/{vtype}/carrier/pvalue/global_fdr', # FDR for the association of the gene with the phenotype corrected for testing 20,000 genes
+
  f'ALL/{vtype}/carrier/beta', # Effect size of being a carrier
 
  f'ALL/{vtype}/n_variants', # number of variants considered in the burden test
+
  f'ALL/{vtype}/n_carriers', # number of carriers considered in the burden test
+
  f'ALL/{vtype}/carrier/stat', # statistic of the burden test
 
  f'ALL/{vtype}/best_AC', # allele count threshold that maximizes separation between carriers and non-carriers determined by the grid search
+
  f'ALL/{vtype}/best_pAI_threshold', # pathogenicity score threshold that maximizes separation between carriers and non-carriers determined by the grid search
 
  f'ALL/{vtype}/pathogenicity_score/carrier_level/regression_beta', # slope of the regression line that predicts phenotype values from pathogenicity scores on carrier level (each individual's phenotype is correlated with the pathogenicity score of the variant they carry)
+
  f'ALL/{vtype}/pathogenicity_score/carrier_level/spearman_r', # Spearman correlation between pathogenicity scores and phenotype values on carrier level
+
  f'ALL/{vtype}/pathogenicity_score/carrier_level/spearman_pvalue', # P-value of the Spearman correlation on carrier level
 
  f'ALL/{vtype}/pathogenicity_score/variant_level/regression_beta', # slope of the regression line that predicts phenotype values from pathogenicity scores on variant level (for each variant, the average phenotyp value among all its carriers is correlated  with the pathogenicity score of the variant)
+
  f'ALL/{vtype}/pathogenicity_score/variant_level/spearman_pvalue', # Spearman correlation between pathogenicity scores and phenotype values on variant level
+
  f'ALL/{vtype}/pathogenicity_score/variant_level/spearman_r', # P-value of the Spearman correlation on variant level
 
  f'ALL/{vtype}/carriers', # sample ids of all carriers of variants considered in the burden test (i.e. variants that pass the thresholds for allele count and pathogenicity scores determined by the grid search)
+
  f'ALL/{vtype}/variants', # variant ids of all variants considered in the burden test (i.e. variants that pass the thresholds for allele count and pathogenicity scores determined by the grid search)
 
  f'ALL/{vtype}/all_carriers', # all carriers of all variants considered by the grid search including carriers of variants below the thresholds determined by the grid search
+
  f'ALL/{vtype}/n_total_carriers', # total number of carriers of all variants considered by the grid search including carriers of variants below the thresholds determined by the grid search
+
  f'ALL/{vtype}/n_total_variants', # total number of variants considered by the grid search including variants below the thresholds determined by the grid search
 
  f'ALL/{vtype}/discarded_variants', # variant ids of the variants that were discarded from the burden test because they were below the allele count and pathogenicity thresholds determined by the grid search
@@ -77,4 +89,5 @@ For each variant type, the results table contains the following columns (vtype i
 
  ### the following columns are used for debugging and should be ignored
  f'ALL/{vtype}/needs_randomization', 
+
  f'ALL/{vtype}/sort_by']
