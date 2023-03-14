@@ -1,20 +1,20 @@
-### Covariate correction 
+# Covariate correction 
 Covariate correction was performed with correct_ukb_phenotype_for_covariates.py
 
-### GWAS finemapping
+# GWAS finemapping
 
 Candidate causal genes were derived from GWAS analysis of UK Biobank phenotypes performed within our work with finemap_UKB_GWAS_SNPs.py
 
 In addition to that, candidate causal genes were derived for all GWAS index variants from the GWAS Catalog with finemap_GWAS_SNPs_v2.py
 
-### Rare variant analysis
+# Rare variant analysis
 
 Individual variant effects were computed with test_each_variant_for_association.py after regressing out common GWAS variants with correct_phenotype_for_common_gwas_variants.py
 
 ## Burden tests
 Burden tests were performed with test_ukb_phenotype_for_association.py
 
-# Column descriptions
+### Column descriptions
 For each phenotype, we perform burden tests for different groups of variant types with the following labels:
 
 del - deleterious variants: the union of all protein-truncating variants (PTVs, defined below), pathogenic missense variants with primateAI score greater than a gene-specific threshold, and variants with SpliceAI score greater than 0.2
@@ -75,6 +75,6 @@ For each variant type, the results table contains the following columns (vtype i
 
  f'ALL/{vtype}/carrier/pvalue/BH_fdr_corr', # FDR corrected p-values with standard Benjamini-Hochberg procedure for multiple testing within the same gene. These p-values are deflated, so we do not recommend using them for downstream analysis. The column f'ALL/{vtype}/carrier/pvalue/fdr_corr' has the corrected p-values and should be used for downstream analysis.
 
- # the following columns are used for debugging and should be ignored
+ ### the following columns are used for debugging and should be ignored
  f'ALL/{vtype}/needs_randomization', 
  f'ALL/{vtype}/sort_by']
