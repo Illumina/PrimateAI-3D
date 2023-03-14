@@ -87,7 +87,7 @@ For each variant type, the results table contains the following columns (vtype i
 
  f'ALL/{vtype}/carrier/pvalue/BH_fdr_corr', # FDR corrected p-values with standard Benjamini-Hochberg procedure for multiple testing within the same gene. These p-values are deflated, so we do not recommend using them for downstream analysis. The column f'ALL/{vtype}/carrier/pvalue/fdr_corr' has the corrected p-values and should be used for downstream analysis.
 
- ### the following columns are used for debugging and should be ignored
+ ### The following columns are used for debugging and should be ignored:
  f'ALL/{vtype}/needs_randomization', 
 
  f'ALL/{vtype}/sort_by']
