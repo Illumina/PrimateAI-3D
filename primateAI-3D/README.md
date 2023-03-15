@@ -15,4 +15,4 @@ python nn_worker.py \
   <config file path>
 ```
 
-<config file path> is the path to the PrimateAI-3D configuration file.
+\<config file path\> is the path to the PrimateAI-3D configuration file.
