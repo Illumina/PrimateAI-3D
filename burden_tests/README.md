@@ -19,7 +19,7 @@ For each phenotype, we perform burden tests for different groups of variant type
 
 del - deleterious variants: the union of all protein-truncating variants (PTVs, defined below), pathogenic missense variants with pathogenicity score greater than a gene-specific threshold, and variants with SpliceAI score greater than 0.2
 
-ptv - protein-truncating variants: SpliceAI score > 0.2 or consequence matching any of the tags: ['stop_gained', 'stop_lost', 'frameshift_variant', 'splice_donor_variant', 'splice_acceptor_variant', 'start_lost', 'transcript_ablation', 'transcript_truncation', 'exon_loss_variant', 'gene_fusion', 'bidirectional_gene_fusion']
+ptv - protein-truncating variants: consequence matching any of the tags: ['stop_gained', 'stop_lost', 'frameshift_variant', 'splice_donor_variant', 'splice_acceptor_variant', 'start_lost', 'transcript_ablation', 'transcript_truncation', 'exon_loss_variant', 'gene_fusion', 'bidirectional_gene_fusion']
 
 missense_all - all missense variants regardless of their pathogenicity
 
