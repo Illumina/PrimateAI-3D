@@ -4,7 +4,6 @@
 
 void shuffle_array(int n_samples, int n_carriers, int n_randomizations, int *result){
     srand(time(NULL));
-//    printf("shuffle_array: %d %d %d\n", n_samples, n_carriers, n_randomizations);
 
     int *indexes = (int *) malloc(n_samples * sizeof(int));
     for (int i = 0; i < n_samples; i ++) {

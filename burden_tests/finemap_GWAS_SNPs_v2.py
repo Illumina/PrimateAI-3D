@@ -19,7 +19,6 @@ from io import StringIO
 import time
 import urllib3
 
-# DBSNP_PATH = ROOT_PATH + '/pfiziev/dbsnp/'
 ANNOTATED_COMMON_VARIANTS = ROOT_PFIZIEV_PATH + '/rare_variants/data/finemapping/annotated_dbsnp.hg19.tsv.gz'
 GENCODE_PATH = ROOT_PFIZIEV_PATH + '/rare_variants/data/gencode/gencode.v24lift37.canonical.with_CDS.tsv'
 
@@ -95,13 +94,9 @@ def finemap_lead_variants(gwas_variants,
 
     echo('initial eQTLs:', len(eqtl_variants))
 
-    # eqtls = eqtls[eqtls['consistent_effects'] == 1]
-
     eqtl_variants['INFO'] = 'n_genes=' + eqtl_variants['n_genes'].map(str) + '|consistent_effect=' + eqtl_variants['consistent_effects'].map(
         str) + '|beta=' + eqtl_variants['max_effect'].map(str) + "|pval=" + eqtl_variants['best_pvalue'].map(str) + "|" + eqtl_variants[
                         'tissues']
-
-    # eqtls = eqtls.drop_duplicates([VCF_CHROM, VCF_POS], keep=False)
 
     eqtl_variants[VCF_CONSEQUENCE] = 'eQTL'
 

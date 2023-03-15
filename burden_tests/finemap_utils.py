@@ -26,7 +26,6 @@ from io import StringIO
 import time
 import urllib3
 
-# DBSNP_PATH = ROOT_PATH + '/pfiziev/dbsnp/'
 ANNOTATED_COMMON_VARIANTS = ROOT_PFIZIEV_PATH +'/rare_variants/data/finemapping/annotated_dbsnp.hg19.tsv.gz'
 GENCODE_PATH = ROOT_PFIZIEV_PATH + '/rare_variants/data/gencode/gencode.v24lift37.canonical.with_CDS.tsv'
 GENCODE_PATH_HG38 = ROOT_PFIZIEV_PATH + '/rare_variants/data/gencode/gencode.v24.annotation.gene_info.csv'
@@ -69,7 +68,6 @@ def finemap_region_conditional(snp_genotypes, ph_data, ph_name_label, data=None,
         local_gwas_corr = None
 
         for batch_idx, batch_varids in enumerate(batchify(var_labels, batch_size)):
-            # echo('batch_idx:', batch_idx, ', batch_varids:', len(batch_varids))
 
             batch_local_gwas_corr = vcorrcoef(d[[ph_name_label + '/corrected']],
                                               d[batch_varids],
@@ -128,9 +126,6 @@ def finemap_region_conditional(snp_genotypes, ph_data, ph_name_label, data=None,
                                                 interactions=interactions,
                                                 verbose=verbose)
 
-        #     echo(best_local_snp_ph_resid.shape)
-        #     display(best_local_snp_ph_resid.head())
-
         d[ph_name_label + '/corrected'] = best_local_snp_ph_resid[ph_name_label]
 
     echo('finemap_region_conditional: Lead SNPs=', lead_snps)
@@ -183,7 +178,6 @@ def plot_gwas_region(gene_name=None,
             index_pval = r['pvalue']
             if index_pval == 0:
                 index_pval = np.min(c_snps[pvalue_label])
-            #         echo(r['index_variant'], r[VCF_POS], -np.log10(index_pval))
             plt.plot([r[VCF_POS]], -np.log10(index_pval), 'o', color='red')
 
     if gencode is not None:
@@ -196,7 +190,6 @@ def plot_gwas_region(gene_name=None,
         locus_genes = pd.merge(locus_genes, pli_info, on=GENE_NAME, how='left').fillna(-1)
 
         echo('Locus genes RV')
-        #     display(locus_genes)
         display(c_rare_var_results[c_rare_var_results[GENE_NAME].isin(set(locus_genes[GENE_NAME]))].sort_values(rv_label)[[GENE_NAME] +
                                                                                                                           [c for c in list(c_rare_var_results) if var_type in c] +
                                                                                                                           [c for c in list(c_rare_var_results) if var_type not in c and c != GENE_NAME]].head(n_rv_genes_to_show))
@@ -206,7 +199,6 @@ def plot_gwas_region(gene_name=None,
                       min(gene_row['tx_end'], right_pos)],
                      [-5, -5],
                      lw=5,
-                     #              color='red' if gene_row[GENE_NAME] == row[GENE_NAME] else None,
                      label=gene_row[GENE_NAME] + (', rv_p=%d (n=%d)' % (
                          -math.log(gene_row[rv_label], 10),
                          gene_row[f'ALL/{var_type}/n_carriers/total']) +
@@ -216,7 +208,6 @@ def plot_gwas_region(gene_name=None,
     plt.show()
 
     return c_snps
-#     plt.pause(1)
 
 
 def plot_ld_conditional_gwas_region(lead_snp_chrom=None,
@@ -377,9 +368,6 @@ def finemap_stepwise(gwas_variants,
 
                     result[k].append(lead_snp_row[k])
 
-    # for k in sorted(result):
-    #     echo('finemap_stepwise:', k, len(result[k]))
-
     return pd.DataFrame(result)
 
 
@@ -468,9 +456,6 @@ def get_connected_components_by_LD(varids, snp_genotypes, gwas_variants, ORDERS_
     if P_VALUE_THRESHOLD is None:
         if len(d) > 0:
             echo('corr from different chromosomes:', len(d))
-            # d2 = corr.reset_index().melt(id_vars='index')
-            #
-            # display(pd.merge(d, d2, on=['index', 'variable']).head(10))
 
             P_VALUE_THRESHOLD = np.min(d['value'])
         else:
@@ -504,12 +489,6 @@ def get_connected_components_by_LD(varids, snp_genotypes, gwas_variants, ORDERS_
         queue_gwas_variants = gwas_variants[gwas_variants[VARID_REF_ALT].isin(queue)].sort_values('pvalue')
 
         lead_snp_row = queue_gwas_variants.iloc[0]
-
-        # queue_gwas_variants = queue_gwas_variants[
-        #     queue_gwas_variants['pvalue'] < (10 ** ORDERS_OF_MAGNITUDE_THRESHOLD) * lead_snp_row['pvalue']].copy()
-
-        # queue_gwas_variants = queue_gwas_variants[
-        #     np.log10(queue_gwas_variants['pvalue']) - np.log10(lead_snp_row['pvalue']) <= ORDERS_OF_MAGNITUDE_THRESHOLD].copy()
 
         queue_gwas_variants['lead_snp'] = lead_snp_row[VARID_REF_ALT]
         queue_gwas_variants['corr_with_lead_snp'] = list(corr.loc[lead_snp_row[VARID_REF_ALT]][queue_gwas_variants[VARID_REF_ALT]])
@@ -550,7 +529,6 @@ def finemap_chromosome(chrom,
                        SPLICEAI_CODING_TAG=None):
 
     echo('fine-mapping chrom:', chrom, ', ld_method:', ld_method)
-    # chrom_gwas_variants = gwas_variants[gwas_variants[VCF_CHROM] == chrom]
     chrom_gwas_variants = all_gwas_variants[all_gwas_variants[VCF_CHROM] == chrom]
 
     fm = finemap_stepwise(chrom_gwas_variants,
@@ -707,12 +685,10 @@ def annotate_chrom_lead_snps(chrom_snps,
     for _, r in chrom_snps_in_ld.iterrows():
         var_to_ref_alt[r[VCF_POS]] = (r[VCF_REF], r[VCF_ALT])
 
-    # display(chrom_snps_in_ld)
     chrom_snps_in_ld = annotate_variants(chrom_snps_in_ld, eqtl_variants, spliceai_variants, gencode, out_dir=out_dir)
 
     chrom_snps_cols = list(chrom_snps)
 
-    # echo('chrom_snps:', len(chrom_snps))
     chrom_snps = pd.merge(chrom_snps,
                           gencode[[VCF_CHROM, 'tss_pos', GENE_NAME]].rename(columns={GENE_NAME: 'nearest_gene_name',
                                                                                      'tss_pos': 'nearest_gene_tss_pos'}),
@@ -754,12 +730,6 @@ def annotate_chrom_lead_snps(chrom_snps,
 
     echo('[annotate_chrom_lead_snps] chrom_snps_in_ld after joining src_var_info:', len(chrom_snps_in_ld))
 
-    # MAX_LOG_PVALUE_DIFFERENCE = 3
-
-    # chrom_snps_in_ld = chrom_snps_in_ld[np.abs(np.log10(chrom_snps_in_ld['gwas_pvalue/source_variant']) -
-    #                                            np.log10(chrom_snps_in_ld['gwas_pvalue/ld_partner'])
-    #                                            ) <= MAX_LOG_PVALUE_DIFFERENCE]
-
     MAX_LOG_PVALUE_FRAC = 0.8
 
     chrom_snps_in_ld = chrom_snps_in_ld[-np.log10(chrom_snps_in_ld['gwas_pvalue/source_variant']) +
@@ -783,7 +753,6 @@ def annotate_chrom_lead_snps(chrom_snps,
         seen.add(row[VCF_RSID])
 
         snps_in_ld = chrom_snps_in_ld[chrom_snps_in_ld['source_variant'] == row[VCF_RSID]]
-        # snps_in_ld = snps_in_ld.drop_duplicates(subset=[VARID_REF_ALT])
 
         res['variant'].append(snp_id(row))
 
@@ -905,62 +874,6 @@ def annotate_chrom_lead_snps(chrom_snps,
                         res['finemapped_via'].append(finemapped_via_info(snps_in_ld))
                         res['variant_type'].append('non_coding')
 
-                #
-                # if len(eqtl_genes) > 0:
-                #     res[GENE_NAME].append(','.join(eqtl_genes))
-                #     res['assoc_type'].append('non_coding' + ('/ambiguous' if len(eqtl_genes) > 1 else ''))
-                #     res['finemapped_via'].append(finemapped_via_info(eQTLs))
-                #     res['variant_type'].append(EQTL)
-                # else:
-                #     res[GENE_NAME].append(','.join(non_coding_genes))
-                #     res['assoc_type'].append('non_coding' + ('/ambiguous' if len(non_coding_genes) > 1 else ''))
-                #     res['finemapped_via'].append(finemapped_via_info(snps_in_ld))
-                #     res['variant_type'].append('non_coding')
-
-            #
-            # if len(non_coding_genes) >= 1 and len(eqtl_genes) >= 1 and set(non_coding_genes) != set(eqtl_genes):
-            #     res[GENE_NAME].append(','.join(non_coding_genes) + ';' + ','.join(eqtl_genes))
-            #     res['assoc_type'].append('non_coding/ambiguous')
-            #     res['finemapped_via'].append(finemapped_via_info(snps_in_ld))
-            #     res['variant_type'].append('non_coding/eQTLs')
-            #
-            # elif len(non_coding_genes) == 1:
-            #     res[GENE_NAME].append(non_coding_genes[0])
-            #     res['assoc_type'].append('non_coding')
-            #     res['finemapped_via'].append(finemapped_via_info(snps_in_ld))
-            #
-            #     if len(eqtl_genes) == 1:
-            #         res['variant_type'].append('non_coding/eQTLs')
-            #     else:
-            #         res['variant_type'].append('non_coding')
-            #
-            # elif len(non_coding_genes) > 1:
-            #
-            #     res[GENE_NAME].append(','.join(non_coding_genes))
-            #     res['assoc_type'].append('non_coding/ambiguous')
-            #     res['finemapped_via'].append(finemapped_via_info(snps_in_ld))
-            #     res['variant_type'].append('non_coding')
-            #
-            # elif len(eqtl_genes) == 1:
-            #
-            #     res[GENE_NAME].append(eqtl_genes[0])
-            #     res['assoc_type'].append('non_coding')
-            #     res['finemapped_via'].append(finemapped_via_info(eQTLs))
-            #     res['variant_type'].append('eQTLs')
-            #
-            # elif len(eqtl_genes) > 1:
-            #     res[GENE_NAME].append(','.join(eqtl_genes))
-            #     res['assoc_type'].append('non_coding/ambiguous')
-            #     res['finemapped_via'].append(finemapped_via_info(eQTLs))
-            #     res['variant_type'].append('eQTLs')
-            #
-            # else:
-            #
-            #     res[GENE_NAME].append(row['nearest_gene_name'])
-            #     res['assoc_type'].append('non_coding')
-            #     res['finemapped_via'].append(finemapped_via_info(snps_in_ld))
-            #     res['variant_type'].append('nearest_gene|distance=' + str(row['nearest_gene_distance']))
-
         for _, ld_snp in snps_in_ld.iterrows():
             seen.add(ld_snp[VCF_RSID])
 
@@ -1001,10 +914,6 @@ def get_gwas_pvalues(chrom, chrom_snps_in_ld, ph_data, ph_name_label, batch_size
 
         batch_chrom_snps_in_ld = chrom_snps_in_ld.loc[batch]
         echo('[get_gwas_pvalues] batch_idx:', batch_idx, ', batch_varids:', len(batch_chrom_snps_in_ld))
-
-        # if len(batch_chrom_snps_in_ld) > batch_size:
-        #     echo('[get_gwas_pvalues] DUPLICATED:',
-        #          batch_chrom_snps_in_ld[batch_chrom_snps_in_ld.duplicated(subset=[VARID_REF_ALT], keep=False)].to_string(max_rows=1000, max_cols=1000))
 
         batch_chrom_snps_in_ld_non_red = batch_chrom_snps_in_ld.drop_duplicates(VARID_REF_ALT)
 
@@ -1065,8 +974,6 @@ def get_gwas_pvalues(chrom, chrom_snps_in_ld, ph_data, ph_name_label, batch_size
 
 
 def find_all_snps_in_ld_ensembl(row, min_ld=MIN_LD_THRESHOLD, LD_LABEL='r2'):
-
-    # echo(row)
 
     all_snp_ids = [row[VCF_RSID]]
     if 'all_RSIDs' in row:
@@ -1141,8 +1048,6 @@ def find_all_snps_in_ld_ensembl(row, min_ld=MIN_LD_THRESHOLD, LD_LABEL='r2'):
             final_result = result
         else:
             final_result = pd.concat([final_result, result], ignore_index=True).drop_duplicates()
-
-    # result = pd.merge(result, annotated_common_variants, on=VCF_RSID, how='left', suffixes=['', '_anno']).sort_values(LD_LABEL, ascending=False)
 
     return final_result
 
@@ -1377,26 +1282,6 @@ def find_all_snps_in_ld_ukbiobank(chrom_snps,
         for k in results:
             results[k].append(ld_row[k])
 
-    # for var_idx, (_, var_info) in enumerate(chrom_snps.iterrows()):
-    #     if var_idx % 100 == 0:
-    #         echo(var_idx, 'variants processed')
-    #
-    #     pos = var_info[VCF_POS]
-    #
-    #     varid = var_info.get(varid_label, None)
-    #     rsid = var_info.get(rsid_label, None)
-    #
-    #     ref = var_info.get(VCF_REF, None)
-    #     alt = var_info.get(VCF_ALT, None)
-    #
-    #     varid_ref_alt = ':'.join(map(str, [chrom, pos, ref, alt]))
-    #
-    #     snps_with_corr_info = ld_for_varid(db, pos, ref, alt, varid, varid_ref_alt, rsid, min_r2=min_ld, qc=qc)
-    #
-    #     for _, ld_row in snps_with_corr_info.iterrows():
-    #         for k in results:
-    #             results[k].append(ld_row[k])
-
     results = pd.DataFrame(results)
     echo('results before dedup:', len(results))
     results = results.drop_duplicates(subset=['source_variant/' + VCF_POS, 'ld_partner/' + VCF_POS])
@@ -1515,9 +1400,6 @@ def find_all_snps_in_ld_ukbiobank_old(chrom_snps,
                     rsid = _d[VCF_RSID]
                     varid_ref_alt = chrom + ':' + str(pos) + ':' + ref + ':' + alt
 
-
-
-            # echo('after merge with qc:', res.shape)
 
         if keep_self_ld_despite_qc:
             res['keep_despite_qc'] = (res['varid_1'] == res['varid_2'])
@@ -2189,16 +2071,13 @@ def get_variant_info_from_ensembl(variant_table, genome='hg19', verbose=True):
                     request_success = True
                     break
 
-            #             r.raise_for_status()
             if not request_success:
-                # echo('PROBLEM: request_success=', request_success)
                 continue
         else:
             request_success = True
 
         if request_success:
             response = r.json()
-            # echo(response)
             for rsid in response:
                 c_chrom = None
 

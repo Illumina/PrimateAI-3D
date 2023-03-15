@@ -149,7 +149,6 @@ if __name__ == '__main__':
                                       out_dir=out_dir)
 
         if gwas_cat_finemapped is not None:
-            # gwas_cat_finemapped = finemap(gwas_data, pvalue_label='pvalue', odds_ratio_label='odds_ratio', ld_method='local', out_dir=out_dir)
             echo('Saving table to:', out_fname)
             gwas_cat_finemapped.to_csv(out_fname, sep='\t', index=False)
             gwas_cat_finemapped.to_pickle(out_fname.replace('.csv.gz', '.pickle'), protocol=4)

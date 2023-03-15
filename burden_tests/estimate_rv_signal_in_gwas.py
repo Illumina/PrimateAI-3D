@@ -28,7 +28,6 @@ def get_gwas_genes_and_rv_results(nr_sign_phenotypes,
     MIN_GWAS_AF = 0.01
 
     missing = []
-    # rv_suffix = f'.all_ethnicities.both.dynamic_med_corrected.IRNT.ukb200k_unrelated_all_ethnicities.maf_{RV_MAF}.common_vars_regressed.primateAI_scores.main_analysis.pickle'
 
     all_genes_in_gwas_loci = None
 
@@ -218,9 +217,6 @@ def compute_rv_vs_gwas_stats_per_assoc_type(gwas_genes_to_use_for_all_stats,
 
         if 'distance_to_index_variant/gwas' in list(gwas_genes_to_use):
 
-
-            # index_variants_to_remove = gwas_genes_to_use[gwas_genes_to_use['distance_to_index_variant/gwas'] < min_distance_of_next_gene].groupby('index_variant/gwas').size().reset_index()
-
             loci_to_remove = gwas_genes_to_use[(gwas_genes_to_use['distance_to_index_variant/gwas'] <= min_distance_of_next_gene)].copy()
 
             gwas_genes_to_use = gwas_genes_to_use[gwas_genes_to_use['distance_to_index_variant/gwas'] <= max_distance_from_index_variant].copy()
@@ -247,8 +243,6 @@ def compute_rv_vs_gwas_stats_per_assoc_type(gwas_genes_to_use_for_all_stats,
             gwas_genes_to_use = gwas_genes_to_use[~gwas_genes_to_use['index_variant/gwas'].isin(loci_to_remove['index_variant/gwas'])].copy()
 
             echo('after:', len(gwas_genes_to_use))
-
-
 
     else:
         gwas_genes_to_use = gwas_genes_to_use[~gwas_genes_to_use['assoc_type/gwas'].str.contains('ambiguous')].copy()
@@ -278,7 +272,6 @@ def compute_rv_vs_gwas_stats_per_assoc_type(gwas_genes_to_use_for_all_stats,
     most_filtered = gwas_genes_to_use_for_all_stats[gwas_genes_to_use_for_all_stats[GENE_NAME].isin(genes_to_keep) &
                                                     (gwas_genes_to_use_for_all_stats['index_variant/gwas'] ==
                                                      gwas_genes_to_use_for_all_stats['varid_ref_alt/gwas']) &
-                                                    # (gwas_genes_to_use_for_all_stats['ALL/del/n_variants'] >= 50) &
                                                     (gwas_genes_to_use_for_all_stats[
                                                          'max_r2_with_index_variant/gwas'] >= 0.9) &
                                                     (gwas_genes_to_use_for_all_stats[
@@ -310,7 +303,6 @@ def compute_rv_vs_gwas_stats_per_assoc_type(gwas_genes_to_use_for_all_stats,
                                                   (gwas_genes_to_use['pvalue/gwas'] <= right_gwas_edge)]
 
         for ph_name in sorted(bin_gwas_genes_to_use['phenotype'].unique()):
-            #         metric_label = 'ALL/del/carrier/pvalue/fdr_corr/global_fdr'
 
             for rv_pval in [0.05]:  # , 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
 
@@ -344,7 +336,6 @@ def compute_rv_vs_gwas_stats_per_assoc_type(gwas_genes_to_use_for_all_stats,
                     ph_sign_genes_rand = []
                     ph_sign_loci_rand = []
 
-                    # echo(N_SHUFF)
                     for r_idx in range(1, 1000):
                         _r = ph_all_gwas_genes[ph_all_gwas_genes[metric_label + '/random/' + str(r_idx)] <= rv_pval]
                         ph_sign_genes_rand.append(len(_r))
@@ -611,32 +602,6 @@ def plot_multiple_rv_vs_gwas_stats(all_stats,
         echo(rv_pvalue, to_plot['pvalue/gwas/interval'][-n_gwas_intervals:], to_plot['n'][-3:],
              to_plot['frac_corr'][-3:])
 
-            # sns.scatterplot(x, to_plot['frac'], marker='o', label='frac', size=to_plot['n'])
-
-        # if most_filtered_stats_coding is not None:
-        #     best_stats = most_filtered_stats_coding[
-        #         (most_filtered_stats_coding['pvalue/gwas/interval'] == most_filtered_gwas_interval) & (
-        #                     most_filtered_stats_coding['pvalue/rv'] == rv_pvalue)]
-        #     best_stats_n_total = np.sum(best_stats['total/loci'])
-        #
-        #     best_frac_corr = (np.sum(best_stats['rv_sign/loci']) - np.sum(best_stats['exp/frac/loci'])) / best_stats_n_total
-        #     best_frac = np.sum(best_stats['rv_sign/loci']) / best_stats_n_total
-        #     echo('best_frac_corr:', best_frac_corr, best_frac)
-        #     plt.scatter(x=[0], y=[best_frac], s=10 * np.sqrt(best_stats_n_total), marker='*',
-        #                 label='High confidence, coding, n= ' + str(best_stats_n_total))
-        #
-        # if most_filtered_stats_non_coding is not None:
-        #     best_stats = most_filtered_stats_non_coding[
-        #         (most_filtered_stats_non_coding['pvalue/gwas/interval'] == most_filtered_gwas_interval) & (
-        #                     most_filtered_stats_non_coding['pvalue/rv'] == rv_pvalue)]
-        #     best_stats_n_total = np.sum(best_stats['total/loci'])
-        #
-        #     best_frac_corr = (np.sum(best_stats['rv_sign/loci']) - np.sum(best_stats['exp/frac/loci'])) / best_stats_n_total
-        #     best_frac = np.sum(best_stats['rv_sign/loci']) / best_stats_n_total
-        #     echo('best_frac_corr:', best_frac_corr, best_frac)
-        #     plt.scatter(x=[0], y=[best_frac], s=10 * np.sqrt(best_stats_n_total), marker='o',
-        #                 label='High confidence, non-coding, n= ' + str(best_stats_n_total))
-
         plt.plot(to_plot['x'], to_plot['frac'], '-', label=stat_label, color=stat_color)
 
         for x, f, s in zip(to_plot['x'], to_plot['frac'], to_plot['n']):
@@ -677,12 +642,6 @@ def plot_multiple_rv_vs_gwas_stats(all_stats,
         echo('Saving figures to:', out_prefix)
         plt.savefig(out_prefix + '.svg')
         plt.savefig(out_prefix + '.png', dpi=300)
-
-        # if store_data:
-        #     echo('Saving data to:', out_prefix)
-        #     stats.to_csv(out_prefix + '.stats.csv.gz', sep='\t', index=False)
-        #     most_filtered_stats_coding.to_csv(out_prefix + '.most_filtered_stats_coding.csv.gz', sep='\t', index=False)
-        #     most_filtered_stats_non_coding.to_csv(out_prefix + '.most_filtered_stats_non_coding.csv.gz', sep='\t', index=False)
 
     plt.show()
 
@@ -764,9 +723,6 @@ def estimate_rv_signal_in_gwas(ph_name='Cholesterol',
     echo('gwas_genes_rv:', gwas_genes_rv.shape)
 
     k_genes_to_use = set(rv_res[GENE_NAME])
-
-    # gwas_genes_to_use = gwas_genes[(gwas_genes['n_genes_near_index_variant/gwas'] <= N_MAX_GENES) &
-    #                                (gwas_genes[GENE_NAME].isin(set(rv_res[GENE_NAME])))].copy()
 
     gwas_genes_to_use = gwas_genes[(gwas_genes['n_genes/gwas'] <= N_MAX_GENES) &
                                    (gwas_genes[GENE_NAME].isin(set(rv_res[GENE_NAME])))].copy()
@@ -953,7 +909,6 @@ def estimate_rv_signal_in_gwas_as_function_of_gwas_pvalue(ph_name='Cholesterol',
     rv_res = rv_res.sort_values('ALL/del/carrier/pvalue/fdr_corr').copy()
     rv_res['del/rank'] = range(1, len(rv_res) + 1)
 
-    # genes_to_test = set(gwas_genes.sort_values('sum_log_p/gwas').drop_duplicates('index_variant/gwas')[GENE_NAME])
     to_plot = {'pvalue/gwas': [],
                'log_p/gwas': [],
                'frac': [],
@@ -966,8 +921,6 @@ def estimate_rv_signal_in_gwas_as_function_of_gwas_pvalue(ph_name='Cholesterol',
         if keep_genes is not None:
             genes_to_test = genes_to_test & keep_genes
 
-        #     genes_to_test = set(gwas_genes[gwas_genes['pvalue/gwas'] <= p].sort_values('sum_log_p/gwas')[GENE_NAME])
-
         genes_to_test_ranks = rv_res[rv_res[GENE_NAME].isin(genes_to_test)]
 
         if len(genes_to_test_ranks) == 0:
@@ -978,7 +931,6 @@ def estimate_rv_signal_in_gwas_as_function_of_gwas_pvalue(ph_name='Cholesterol',
 
         best_n, best_p = test_ranks(real_ranks, len(rv_res))
 
-        #     echo(p, best_p, best_n, best_n / len(genes_to_test_ranks), len(genes_to_test_ranks))
         to_plot['log_p/gwas'].append(np.log10(p))
         to_plot['pvalue/gwas'].append(p)
         to_plot['frac'].append(best_n / len(genes_to_test_ranks))

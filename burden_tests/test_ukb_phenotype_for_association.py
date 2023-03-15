@@ -134,8 +134,6 @@ def read_rare_variants(gene_info_fname,
 
     echo('total variants after filtering for missingness:', rare_variants_full.shape)
 
-    # return rare_variants_full.copy(deep=True), None
-
     if gnomad_coverage is not None:
 
         if len(gnomad_coverage) != 2:
@@ -184,21 +182,6 @@ def read_rare_variants(gene_info_fname,
     all_samples = sorted(set([s for ss in rare_variants_full[ALL_SAMPLES] for s in ss.split(',')]))
 
     echo('n_samples:', len(all_samples))
-
-    # ph_data = original_ph_data # [original_ph_data[SAMPLE_ID].isin(set(all_samples))].copy()
-
-    # echo('Exome samples with phenotype:', len(ph_data))
-
-    # echo('Phenotype', phenotype_name, 'is binary:', is_binary)
-    # if is_binary:
-    #     if is_age_at_diagnosis:
-    #         all_vals = ph_data[phenotype_name + '/original']
-    #     else:
-    #         all_vals = ph_data[phenotype_name]
-    #
-    #     echo('Cases:', np.sum(all_vals), ', Controls:', len(all_vals) - np.sum(all_vals))
-    #     # echo('Treating as continuous phenotype!!')
-    #     # is_binary = False
 
     echo('Rare variants:', len(rare_variants_full))
 
@@ -362,7 +345,6 @@ def main():
                         help='list of covariates to regress out from the phenotype values before association'
                         )
 
-    # parser.add_argument('--is-binary', dest='is_binary', action='store_true', help='is_binary')
     parser.add_argument('--skip-pvalues-for-covariates', dest='skip_pvalues_for_covariates', action='store_true', help='Do not output p-values and effect sizes for the covariates during covariate correction. '
                                                                                                                        'This uses a faster regression method with less memory and does not affect the final results.')
     parser.add_argument('--test-meds', dest='test_meds', action='store_true', help='test medications')
@@ -792,8 +774,6 @@ def main():
 
             if not test_meds and test_PRS is None:
 
-                # echo('Ranking data')
-                # ph_data_for_testing[phenotype_name] = scipy.stats.rankdata(ph_data_for_testing[phenotype_name])
                 output_dir = os.path.split(out_prefix)[0]
                 if output_dir == '':
                     output_dir = os.getcwd()
@@ -878,8 +858,6 @@ def main():
 
             if test_meds:
 
-                # med_labels_to_test, med_names_to_test = get_med_columns(ph_data)
-
                 assoc_type = 'IRNT' if phenotype_name.endswith('.IRNT') else 'RAW'
 
                 med_labels_to_test = [m for m in list(ph_data) if m.startswith('on_med.') and '.1st_visit.' in m and ph_data.iloc[0][
@@ -963,13 +941,10 @@ def main():
                 gc_corr = 1 - np.power((1 - _r[f'ALL/{vtype}/carrier/pvalue']),
                                        _r[f'ALL/{vtype}/carrier/pvalue/chi2_correction'] * m_factor)
 
-                # gc_corr_raw = _r[f'ALL/{vtype}/carrier/pvalue/fdr_corr'] * raw_factor
                 # correct only genes, for which chi2_correction was calculated to be non-zero
                 _r[f'ALL/{vtype}/carrier/pvalue/fdr_corr'] = np.where(_r[f'ALL/{vtype}/carrier/pvalue/chi2_correction'] > 0,
                                                                       gc_corr,
                                                                       _r[f'ALL/{vtype}/carrier/pvalue/fdr_corr'])
-
-                # _r[f'ALL/{vtype}/carrier/pvalue/genomic_factor/is_raw'] = (~_r[f'ALL/{vtype}/carrier/pvalue/chi2_correction'] > 0).astype(int)
 
                 _r[f'ALL/{vtype}/carrier/pvalue/genomic_factor'] = np.where(_r[f'ALL/{vtype}/carrier/pvalue/chi2_correction'] > 0,
                                                                             m_factor,

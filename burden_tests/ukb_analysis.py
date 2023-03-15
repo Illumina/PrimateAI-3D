@@ -40,8 +40,6 @@ def combine_phenotypes_by_prefix(ukb_phenotypes,
                                  covariates_to_regress=None,
                                  inverse_rank_normal_tranform=False):
 
-    # echo('inverse_rank_normal_tranform:', inverse_rank_normal_tranform)
-
     import statsmodels.api as sm
     # collect info for columns needed to compute phenotype values
     col_names = []
@@ -59,8 +57,6 @@ def combine_phenotypes_by_prefix(ukb_phenotypes,
             for prefix in prefixes:
                 if c.startswith(prefix):
                     col_names.append(c)
-
-    # echo('Columns to combine:', col_names)
 
     result = ukb_phenotypes[[SAMPLE_ID] + col_names].copy()
 
@@ -98,7 +94,6 @@ def combine_phenotypes_by_prefix(ukb_phenotypes,
                         cov_values[d_label] = dummies[d_label]
 
                 elif cov_func == DATE_PHENOTYPE:
-                    # dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S') if not pd.isnull(x) else x
                     extract_date = lambda x: x.split('T')[0] if not pd.isnull(x) else x
 
                     dummies = pd.get_dummies(ukb_phenotypes[cov_col_name].apply(extract_date), prefix=cov_label)
@@ -106,7 +101,6 @@ def combine_phenotypes_by_prefix(ukb_phenotypes,
                         cov_values[d_label] = dummies[d_label]
 
                 elif cov_func == HOUR_PHENOTYPE:
-                    # dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S') if not pd.isnull(x) else x
 
                     def extract_hour(x):
 
@@ -160,13 +154,6 @@ def combine_phenotypes_by_prefix(ukb_phenotypes,
             regression_result = regression_model.fit()
 
         echo(regression_result.summary(), logfile_only=True)
-        # plt.title('Before covariate correction')
-        # plt.hist(result[phenotype_name], bins=30)
-        # plt.show()
-        #
-        # plt.title('After covariate correction')
-        # plt.hist(regression_result.resid, bins=30)
-        # plt.show()
 
         result[phenotype_name] = regression_result.resid
 
@@ -264,110 +251,6 @@ def get_covariates(ukb_phenotypes, covariates, bias=True):
 
     return pd.DataFrame(cov_values)
 
-#
-# def regress_out_covariates_from_ukb_phenotype_old(ukb_phenotypes,
-#                                               phenotype_code,
-#                                               phenotype_name,
-#                                               covariates,
-#                                               sex,
-#                                               bias=True,
-#                                               log_dir=None,
-#                                               outlier_cutoff=None,
-#                                               irnt_transform=False,
-#                                               additional_covariates=None,
-#                                               fig_label='',
-#                                               phenotype_is_binary=False,
-#                                               impute_missing_covatiates=False):
-#     import statsmodels.api as sm
-#
-#     phenotype = ukb_phenotypes[[SAMPLE_ID, phenotype_code]].dropna(how='any').copy()
-#
-#     # remove outliers
-#     if outlier_cutoff is not None:
-#         before = len(phenotype)
-#         phenotype = phenotype[np.abs(scipy.stats.zscore(phenotype[phenotype_code])) <= outlier_cutoff]
-#         echo('Removed', before - len(phenotype), 'outliers father than', outlier_cutoff, 'standard deviations')
-#
-#     if irnt_transform:
-#         echo('Inverse rank normal transforming the data')
-#         phenotype[phenotype_code] = rank_INT(phenotype[phenotype_code])
-#
-#     phenotype[phenotype_name + '.original'] = phenotype[phenotype_code]
-#
-#     predictors = get_covariates(ukb_phenotypes, covariates, bias=bias)
-#
-#     echo('n_covariates=', len(list(predictors)))
-#     echo('Total rows:', len(predictors))
-#     for p in list(predictors):
-#         echo('covariate=', p, ', non_nan=', len(predictors) - np.sum(predictors[p].isnull()), logfile_only=True)
-#
-#     predictors = predictors.dropna()
-#     echo('rows after removing nan values:', len(predictors))
-#
-#     if additional_covariates is not None:
-#         predictors = pd.merge(predictors, additional_covariates, on=SAMPLE_ID)
-#
-#     predictors = pd.merge(predictors, phenotype, on=SAMPLE_ID)[list(predictors)]
-#     phenotype = pd.merge(predictors, phenotype, on=SAMPLE_ID)[list(phenotype)]
-#
-#     # exclude covariates that have too few different values
-#     cov_to_exclude = []
-#     for cov_label in list(predictors):
-#
-#         if cov_label == CONST_LABEL:
-#             continue
-#
-#         all_distinct_values = predictors[cov_label].value_counts()
-#
-#         if (len(all_distinct_values) == 1 or
-#             (len(all_distinct_values) == 2 and any(val_count < 10 for val_count in all_distinct_values))):
-#             cov_to_exclude.append(cov_label)
-#
-#     echo('Excluding covariates due to insufficient variability:', cov_to_exclude, logfile_only=True)
-#     predictors = predictors.drop(cov_to_exclude, axis=1)
-#
-#     echo('Fitting regression with n=', len(phenotype), 'samples')
-#     if phenotype_is_binary:
-#         regr_model_type = sm.Logit
-#         # tmp_fname = log_dir + '/' + phenotype_name + '.' + fig_label + '.reg_data.csv.gz'
-#         # echo('Storing input data:', tmp_fname)
-#         # pd.merge(predictors, phenotype, on=SAMPLE_ID).to_csv(tmp_fname, sep='\t', index=False)
-#
-#     else:
-#         regr_model_type = sm.OLS
-#
-#     regression_model = regr_model_type(phenotype[phenotype_code], predictors[[c for c in list(predictors) if c != SAMPLE_ID]])
-#
-#     with warnings.catch_warnings():
-#         warnings.filterwarnings("ignore")
-#         regression_result = regression_model.fit()
-#
-#     echo(regression_result.summary(), logfile_only=True)
-#
-#     from matplotlib import pyplot as plt
-#     import seaborn as sns
-#
-#     FIG_SIZE = (12, 6)
-#     fig, ax = plt.subplots(1, 2, figsize=FIG_SIZE)
-#
-#     fig.suptitle(phenotype_name + ', ' + 'IRNT= ' + str(irnt_transform) + ', ' + fig_label)
-#     ax[0].set_title('Before correction, n= ' + str(len(phenotype)))
-#     sns.distplot(phenotype[phenotype_code], bins=30, ax=ax[0])
-#     # plt.show()
-#
-#     ax[1].set_title('After correction, n= ' + str(len(phenotype)))
-#     sns.distplot(regression_result.resid, bins=30, ax=ax[1])
-#     plt.show()
-#     if log_dir is not None:
-#         plt.savefig(log_dir + '/' + phenotype_name + '.' + str(phenotype_code) + '.' + sex + '.' + 'IRNT_' + str(irnt_transform) + '.' + fig_label + '.corrected.png', dpi=100)
-#
-#     corrected = pd.DataFrame({SAMPLE_ID: phenotype[SAMPLE_ID],
-#                               phenotype_name: regression_result.resid})
-#
-#     corrected = pd.merge(corrected, phenotype[[SAMPLE_ID, phenotype_name + '.original']], on=SAMPLE_ID)
-#
-#     return corrected
-
 
 def save_regression_results(y_label, model_type, regression_result, out_fname_prefix):
 
@@ -452,7 +335,6 @@ def regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
         echo('Rows after removing NaN values:', len(predictors))
 
     data = pd.merge(phenotype, predictors, on=SAMPLE_ID)
-    # sample_id_order = data[SAMPLE_ID].copy()
 
     data = data[[SAMPLE_ID, phenotype_code] + predictor_labels]
     # exclude covariates that have too few different values
@@ -489,18 +371,12 @@ def regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
         for col in missing_columns:
             echo('Filling missing values in:', col, ':', np.sum(is_null[col]), 'with mean=', predictor_means[col])
             data[col] = data[col].fillna(predictor_means[col])
-            # data[col] = data.apply(lambda r: knn(r, col, non_missing), axis=1)
-
-        # data = data.fillna(value=predictor_means)
 
     echo('Fitting regression with n=', len(data), 'samples')
     if phenotype_is_binary:
         echo('Fitting a logit model')
         regr_model_type = sm.Logit
         model_type = 'Logit'
-        # tmp_fname = log_dir + '/' + phenotype_name + '.' + fig_label + '.reg_data.csv.gz'
-        # echo('Storing input data:', tmp_fname)
-        # pd.merge(predictors, phenotype, on=SAMPLE_ID).to_csv(tmp_fname, sep='\t', index=False)
 
     else:
         echo('Fitting an OLS model')
@@ -536,7 +412,6 @@ def regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
     fig.suptitle(phenotype_name + ', ' + 'IRNT= ' + str(irnt_transform) + ', ' + fig_label)
     ax[0].set_title('Before correction, n= ' + str(len(data)))
     sns.distplot(data[phenotype_code], bins=30, ax=ax[0])
-    # plt.show()
 
     ax[1].set_title('After correction, n= ' + str(len(data)))
     sns.distplot(regression_result.resid, bins=30, ax=ax[1])
@@ -560,288 +435,6 @@ def regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
     else:
         return corrected
 
-#
-# def regress_out_effect_of_medication(ukb_phenotypes,
-#                                      sex,
-#                                      phenotype_code,
-#                                      phenotype_name,
-#
-#                                      medication_codes,
-#                                      medication_name,
-#                                      covariates_to_regress,
-#                                      log_dir=None):
-#
-#     # echo('inverse_rank_normal_tranform:', inverse_rank_normal_tranform)
-#
-#     import statsmodels.api as sm
-#     import seaborn as sns
-#     from matplotlib import pyplot as plt
-#     FIG_SIZE = (15, 8)
-#     # collect info for columns needed to compute phenotype values
-#
-#     def recode_covariates(covariates, visit):
-#         import copy
-#
-#         recoded = copy.deepcopy(covariates)
-#
-#         for cov_idx in range(len(recoded)):
-#
-#             cov = recoded[cov_idx]
-#
-#             if type(cov) is tuple:
-#                 if len(cov) == 3:
-#                     cov_type = 3
-#                     cov_col_name, cov_func, cov_label = cov
-#                 else:
-#                     cov_type = 2
-#                     cov_col_name, cov_label = cov
-#                     cov_func = lambda v: v
-#             else:
-#                 cov_type = 1
-#                 cov_col_name = cov_label = cov
-#                 cov_func = lambda v: v
-#
-#             if type(cov_col_name) is str:
-#                 if '-' not in cov_col_name:
-#                     cov_col_name += '-%d.0' % (visit - 1)
-#             else:
-#                 for c_idx in range(len(cov_col_name)):
-#                     if '-' not in cov_col_name[c_idx]:
-#                         cov_col_name[c_idx] += '-%d.0' % (visit - 1)
-#
-#             if cov_type == 1:
-#                 recoded[cov_idx] = cov_col_name
-#
-#             elif cov_type == 2:
-#                 recoded[cov_idx] = (cov_col_name, cov_label)
-#
-#             elif cov_type == 3:
-#                 recoded[cov_idx] = (cov_col_name, cov_func, cov_label)
-#
-#             else:
-#                 echo('Error:', cov)
-#
-#         return recoded
-#
-#     final_result = []
-#     for irnt_transform in [False, True]:
-#
-#         echo('IRN transform:', irnt_transform)
-#         # ph_std = np.std(ukb_phenotypes[str(phenotype_code) + '-0.0'].dropna())
-#
-#         cor_phenotype_first_visit = regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
-#                                                                               str(phenotype_code) + '-0.0',
-#                                                                               phenotype_name,
-#                                                                               recode_covariates(covariates_to_regress,
-#                                                                                                 visit=1),
-#                                                                               sex,
-#                                                                               bias=True,
-#                                                                               # norm_factor=ph_std,
-#                                                                               log_dir=log_dir,
-#                                                                               irnt_transform=irnt_transform,
-#                                                                               fig_label='1st_visit'
-#                                                                               )
-#
-#         cor_phenotype_second_visit = regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
-#                                                                                str(phenotype_code) + '-1.0',
-#                                                                                phenotype_name,
-#                                                                                recode_covariates(covariates_to_regress,
-#                                                                                                  visit=2),
-#                                                                                sex,
-#                                                                                bias=True,
-#                                                                                # norm_factor=ph_std,
-#                                                                                log_dir=log_dir,
-#                                                                                irnt_transform=irnt_transform,
-#                                                                                fig_label='2nd_visit')
-#
-#         AGE_1st_visit = '21003-0.0'
-#         AGE_2nd_visit = '21003-1.0'
-#
-#         phenotype = pd.merge(cor_phenotype_first_visit,
-#                              cor_phenotype_second_visit,
-#                              on=SAMPLE_ID,
-#                              suffixes=['.1st_visit', '.2nd_visit'])
-#
-#         phenotype[phenotype_name + '.diff'] = phenotype[phenotype_name + '.2nd_visit'] - phenotype[phenotype_name + '.1st_visit']
-#
-#         phenotype = phenotype[[SAMPLE_ID, phenotype_name + '.diff']]
-#
-#         phenotype = pd.merge(phenotype, pd.DataFrame({SAMPLE_ID: ukb_phenotypes[SAMPLE_ID],
-#                                                       'time': ukb_phenotypes[AGE_2nd_visit] -
-#                                                               ukb_phenotypes[AGE_1st_visit]}))
-#
-#         phenotype['__CONST__'] = 1
-#
-#         meds_all_cols = ukb_phenotypes[[SAMPLE_ID] + MEDICATIONS_FIRST_VISIT + MEDICATIONS_SECOND_VISIT].copy()
-#
-#         # meds_all_cols = meds_all_cols.dropna(how='all', subset=MEDICATIONS_FIRST_VISIT)
-#         # meds_all_cols = meds_all_cols.dropna(how='all', subset=MEDICATIONS_SECOND_VISIT)
-#
-#         meds = meds_all_cols[[SAMPLE_ID]].copy()
-#
-#         on_med_first_visit = 'meds.' + medication_name + '.1st_visit.' + sex
-#         on_med_second_visit = 'meds.' + medication_name + '.2nd_visit.' + sex
-#
-#         on_meds = 'med.' + medication_name + '.' + sex
-#
-#         meds_all_cols[on_med_first_visit] = (meds_all_cols[MEDICATIONS_FIRST_VISIT].isin(medication_codes)).any(axis=1)
-#         meds_all_cols[on_med_second_visit] = (meds_all_cols[MEDICATIONS_SECOND_VISIT].isin(medication_codes)).any(axis=1)
-#
-#         fst = meds_all_cols[on_med_first_visit].astype(int)
-#
-#         first_meds_int = meds_all_cols[[SAMPLE_ID]].copy()
-#         first_meds_int[on_med_first_visit] = fst
-#
-#         sec = meds_all_cols[on_med_second_visit].astype(int)
-#
-#         on_meds_dummies = pd.get_dummies(fst + 2 * sec, prefix=on_meds)
-#         correction_no_meds_label = on_meds + '_0'
-#         correction_on_meds_label = on_meds + '_2'
-#
-#         min_n_subjects = len(on_meds_dummies)
-#
-#         for i in range(4):
-#             label = on_meds + '_' + str(i)
-#             n_subjects = np.sum(on_meds_dummies[label] if label in list(on_meds_dummies) else 0)
-#             if n_subjects <= min_n_subjects:
-#                 min_n_subjects = n_subjects
-#             echo(label, 'n=', n_subjects)
-#
-#         MIN_N_SUBJECTS_PER_CATEGORY = 50
-#
-#         if len(list(on_meds_dummies)) != 4 or min_n_subjects <= MIN_N_SUBJECTS_PER_CATEGORY:
-#             echo('ERROR: not enough data to estimate effect of:', on_meds)
-#
-#             corrected_phenotype = pd.merge(cor_phenotype_first_visit[[SAMPLE_ID,
-#                                                                       phenotype_name]],
-#                                            first_meds_int,
-#                                            on=SAMPLE_ID)
-#
-#             before_RS = scipy.stats.ranksums(corrected_phenotype[corrected_phenotype[on_med_first_visit] == 0][phenotype_name],
-#                                              corrected_phenotype[corrected_phenotype[on_med_first_visit] == 1][phenotype_name])
-#
-#             echo(on_meds, 'before_RS=', before_RS)
-#
-#         else:
-#             for d_label in list(on_meds_dummies):
-#                 meds[d_label] = on_meds_dummies[d_label]
-#
-#             phenotype = pd.merge(phenotype, meds, on=SAMPLE_ID)
-#
-#             echo('Regressing out time between visits with n=', len(phenotype), 'samples')
-#
-#             y_label = phenotype_name + '.diff'
-#
-#             regression_model = sm.OLS(phenotype[y_label],
-#                                       phenotype[[c for c in list(phenotype) if c not in [SAMPLE_ID, y_label]]])
-#
-#             with warnings.catch_warnings():
-#                 warnings.filterwarnings("ignore")
-#                 regression_result = regression_model.fit()
-#
-#             echo(regression_result.summary(), logfile_only=True)
-#
-#             med_labels = [c for c in list(phenotype) if c.startswith('med.')]
-#
-#             correction_on_meds = regression_result.params[correction_on_meds_label]
-#             correction_no_meds = regression_result.params[correction_no_meds_label]
-#
-#             echo('on_meds_correction=', correction_on_meds,
-#                  'on_meds_p-value=', regression_result.pvalues[correction_on_meds_label],
-#                  'no_meds_correction=', correction_no_meds,
-#                  'no_meds_p-value=', regression_result.pvalues[correction_no_meds_label],
-#                  'phenotype=', phenotype_name,
-#                  'medication=', on_meds)
-#
-#             corrected_phenotype = pd.merge(cor_phenotype_first_visit,
-#                                            first_meds_int,
-#                                            on=SAMPLE_ID)
-#
-#             corrected_phenotype[phenotype_name + '.corrected'] = (corrected_phenotype[phenotype_name] -
-#                                                                   correction_on_meds * corrected_phenotype[on_med_first_visit] -
-#                                                                   correction_no_meds * (1 - corrected_phenotype[on_med_first_visit]))
-#
-#             before_RS = scipy.stats.ranksums(corrected_phenotype[corrected_phenotype[on_med_first_visit] == 0][phenotype_name],
-#                                              corrected_phenotype[corrected_phenotype[on_med_first_visit] == 1][phenotype_name])
-#
-#             after_RS = scipy.stats.ranksums(corrected_phenotype[corrected_phenotype[on_med_first_visit] == 0][phenotype_name + '.corrected'],
-#                                             corrected_phenotype[corrected_phenotype[on_med_first_visit] == 1][phenotype_name + '.corrected'])
-#
-#
-#             to_report = pd.DataFrame({'p-value': regression_result.pvalues[[c for c in med_labels]],
-#                                       'beta': regression_result.params[[c for c in med_labels]],
-#                                       'phenotype': [phenotype_name] * len(med_labels),
-#                                       'med_label': med_labels})
-#
-#             for r_idx, row in to_report.iterrows():
-#                 echo('FINDINGS:', row['p-value'], row['beta'], row['phenotype'], row['med_label'], np.sum(phenotype[r_idx]))
-#
-#             echo(on_meds, 'IRNT=', str(irnt_transform), 'before_RS=', before_RS, 'after_RS=', after_RS)
-#
-#         if np.sum(corrected_phenotype[on_med_first_visit]) > 0:
-#             static_med_corrected = regress_out_covariates_from_ukb_phenotype( ukb_phenotypes,
-#                                                                               str(phenotype_code) + '-0.0',
-#                                                                               phenotype_name,
-#                                                                               recode_covariates(covariates_to_regress,
-#                                                                                                 visit=1),
-#                                                                               sex,
-#                                                                               bias=True,
-#                                                                               log_dir=log_dir,
-#                                                                               irnt_transform=irnt_transform,
-#                                                                               additional_covariates=corrected_phenotype[[SAMPLE_ID, on_med_first_visit]],
-#                                                                               fig_label='1st_visit.static_med_correction.' + medication_name
-#                                                                               )
-#
-#             corrected_phenotype = pd.merge(corrected_phenotype,
-#                                            static_med_corrected[[SAMPLE_ID, phenotype_name]],
-#                                            on=SAMPLE_ID,
-#                                            suffixes=['', '.static_med_corrected'])
-#
-#         fig = plt.figure(figsize=FIG_SIZE)
-#
-#         plt.title(phenotype_name + ' ' + on_meds)
-#
-#         for on_meds_status, ph_name, label in [ (0, phenotype_name + '.corrected', 'dynamic med corr, no meds'),
-#                                                 (1, phenotype_name + '.corrected', 'dynamic med corr, '+ medication_name),
-#                                                 (0, phenotype_name + '.static_med_corrected', 'static med corr, no meds'),
-#                                                 (1, phenotype_name + '.static_med_corrected', 'static med corr, ' + medication_name),
-#                                                 (0, phenotype_name, 'original, no meds'),
-#                                                 (1, phenotype_name, 'original, ' + medication_name)]:
-#
-#             if ph_name in list(corrected_phenotype):
-#                 values = corrected_phenotype[corrected_phenotype[on_med_first_visit] == on_meds_status][ph_name]
-#                 rest_values = corrected_phenotype[corrected_phenotype[on_med_first_visit] == 1 - on_meds_status][ph_name]
-#                 pval = scipy.stats.ranksums(values, rest_values)[1]
-#                 if pval == 0:
-#                     pval = 1e-300
-#
-#                 if np.isnan(pval):
-#                     l10_p = 'NaN'
-#                 else:
-#                     l10_p = str(int(math.log(pval, 10)))
-#
-#                 sns.distplot(values, label=label +
-#                                            ', m= %.3lf' % np.mean(values) +
-#                                            ', -log10_P=' + l10_p)
-#
-#         plt.legend()
-#         plt.show()
-#         fig.savefig(log_dir + '/' + on_meds + '.' + phenotype_name + '.IRNT_' + str(irnt_transform) + '.png', dpi=100)
-#
-#         final_result.append(corrected_phenotype.rename(columns={phenotype_name: phenotype_name + '.static_no_med_corrected',
-#                                                                 phenotype_name + '.corrected': phenotype_name + '.dynamic_med_corrected'}))
-#
-#     corr_labels = [k for k in [phenotype_name + '.static_no_med_corrected',
-#                                phenotype_name + '.static_med_corrected',
-#                                phenotype_name + '.dynamic_med_corrected']
-#                    if k in list(final_result[1])]
-#
-#     to_return = pd.merge(final_result[0],
-#                          final_result[1][[SAMPLE_ID] + corr_labels],
-#                          on=SAMPLE_ID,
-#                          suffixes=['', '.IRNT'])
-#
-#     return to_return
 
 def recode_covariates(covariates, visit):
     import copy
@@ -916,8 +509,6 @@ def _correct_phenotype(ph_data,
 
     ph_data = pd.merge(corrected_ph_data[[SAMPLE_ID, cor_ph_name]], ph_data, on=SAMPLE_ID)
     echo('ph_data:', ph_data.shape)
-
-    # display(ph_data.head())
 
     return ph_data
 
@@ -1151,9 +742,6 @@ def correct_effects_of_drugs_on_phenotype(cor_phenotype_first_visit,
 
     meds_all_cols = ukb_phenotypes[[SAMPLE_ID] + MEDICATIONS_FIRST_VISIT + MEDICATIONS_SECOND_VISIT].copy()
 
-    # meds_all_cols = meds_all_cols.dropna(how='all', subset=MEDICATIONS_FIRST_VISIT)
-    # meds_all_cols = meds_all_cols.dropna(how='all', subset=MEDICATIONS_SECOND_VISIT)
-
     meds = {SAMPLE_ID: list(meds_all_cols[SAMPLE_ID])}
     first_meds_int = {SAMPLE_ID: list(meds_all_cols[SAMPLE_ID])}
 
@@ -1175,7 +763,6 @@ def correct_effects_of_drugs_on_phenotype(cor_phenotype_first_visit,
         on_meds_dummies = pd.get_dummies(fst + 2 * sec, prefix=on_meds)
 
         for label in list(on_meds_dummies):
-            # echo(label, 'n=', np.sum(on_meds_dummies[label] if label in list(on_meds_dummies) else 0))
             meds[label] = list(on_meds_dummies[label])
 
         medication_dummies[medication_name] = list(on_meds_dummies)
@@ -1305,7 +892,6 @@ def correct_effects_of_drugs_on_phenotype(cor_phenotype_first_visit,
             save_regression_results(y_label, model_type, regression_result, model_res_fname_prefix)
 
         on_med_first_visit_labels_assoc_meds = [on_med_first_visit_labels_dict[m] for m in associated_meds]
-        # med_info_for_static_correction = corrected_phenotype[[SAMPLE_ID] + on_med_first_visit_labels]
 
         # compute the difference of differences for the effect of each drug:
         # first get effects of starting the drugs
@@ -1347,453 +933,6 @@ def correct_effects_of_drugs_on_phenotype(cor_phenotype_first_visit,
 
     return associated_meds, corrected_phenotype, med_info_for_static_correction, on_med_first_visit_labels_dict
 
-
-# def regress_out_effect_of_multiple_medications_old(ukb_phenotypes,
-#                                                sex,
-#
-#                                                phenotype_code,
-#                                                phenotype_name,
-#
-#                                                medications,
-#
-#                                                covariates_to_regress,
-#                                                log_dir=None,
-#                                                min_subjects_per_category=50,
-#                                                phenotype_is_binary=False,
-#                                                return_covariates=False,
-#                                                impute_missing_covatiates=False):
-#
-#     # echo('inverse_rank_normal_tranform:', inverse_rank_normal_tranform)
-#
-#     import statsmodels.api as sm
-#     import seaborn as sns
-#     from matplotlib import pyplot as plt
-#
-#     # collect info for columns needed to compute phenotype values
-#
-#     def recode_covariates(covariates, visit):
-#         import copy
-#
-#         recoded = copy.deepcopy(covariates)
-#
-#         for cov_idx in range(len(recoded)):
-#
-#             cov = recoded[cov_idx]
-#
-#             if type(cov) is tuple:
-#                 if len(cov) == 3:
-#                     cov_type = 3
-#                     cov_col_name, cov_func, cov_label = cov
-#                 else:
-#                     cov_type = 2
-#                     cov_col_name, cov_label = cov
-#                     cov_func = lambda v: v
-#             else:
-#                 cov_type = 1
-#                 cov_col_name = cov_label = cov
-#                 cov_func = lambda v: v
-#
-#             if type(cov_col_name) is int:
-#                 cov_col_name = str(cov_col_name)
-#
-#             if type(cov_col_name) is str:
-#                 if '-' not in cov_col_name:
-#                     cov_col_name += '-%d.0' % (visit - 1)
-#             else:
-#                 for c_idx in range(len(cov_col_name)):
-#                     if '-' not in cov_col_name[c_idx]:
-#                         cov_col_name[c_idx] += '-%d.0' % (visit - 1)
-#
-#             if cov_type == 1:
-#                 recoded[cov_idx] = cov_col_name
-#
-#             elif cov_type == 2:
-#                 recoded[cov_idx] = (cov_col_name, cov_label)
-#
-#             elif cov_type == 3:
-#                 recoded[cov_idx] = (cov_col_name, cov_func, cov_label)
-#
-#             else:
-#                 echo('Error:', cov)
-#
-#         return recoded
-#
-#     final_result = []
-#     for irnt_transform in [False, True]:
-#
-#         echo('IRN transform:', irnt_transform)
-#         # ph_std = np.std(ukb_phenotypes[str(phenotype_code) + '-0.0'].dropna())
-#
-#         cor_phenotype_first_visit = regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
-#                                                                               str(phenotype_code) + '-0.0',
-#                                                                               phenotype_name,
-#                                                                               recode_covariates(covariates_to_regress,
-#                                                                                                 visit=1),
-#                                                                               sex,
-#                                                                               bias=True,
-#                                                                               # norm_factor=ph_std,
-#                                                                               log_dir=log_dir,
-#                                                                               irnt_transform=irnt_transform,
-#                                                                               fig_label='1st_visit',
-#                                                                               phenotype_is_binary=phenotype_is_binary,
-#                                                                               impute_missing_covatiates=impute_missing_covatiates
-#                                                                               )
-#
-#         second_visit_phenotype_label = str(phenotype_code) + '-1.0'
-#         if second_visit_phenotype_label in list(ukb_phenotypes):
-#
-#             # this is an attempt to fix regression to the mean
-#
-#             diff_df = None
-#
-#             cor_phenotype_second_visit = regress_out_covariates_from_ukb_phenotype(ukb_phenotypes,
-#                                                                                    second_visit_phenotype_label,
-#                                                                                    phenotype_name,
-#                                                                                    recode_covariates(covariates_to_regress,
-#                                                                                                      visit=2),
-#                                                                                    sex,
-#                                                                                    bias=True,
-#                                                                                    # norm_factor=ph_std,
-#                                                                                    log_dir=log_dir,
-#                                                                                    irnt_transform=irnt_transform,
-#                                                                                    fig_label='2nd_visit',
-#                                                                                    phenotype_is_binary=phenotype_is_binary,
-#                                                                                    additional_covariates=diff_df,
-#                                                                                    impute_missing_covatiates=impute_missing_covatiates)
-#         else:
-#
-#             echo('WARNING: phenotype was not measured during the second visit:', phenotype_name)
-#             cor_phenotype_second_visit = pd.merge(cor_phenotype_first_visit, ukb_phenotypes[~ukb_phenotypes[AGE_2nd_visit].isnull()][[SAMPLE_ID]])
-#
-#         phenotype = pd.merge(cor_phenotype_first_visit,
-#                              cor_phenotype_second_visit,
-#                              on=SAMPLE_ID,
-#                              suffixes=['.1st_visit', '.2nd_visit'])
-#
-#         phenotype[phenotype_name + '.diff'] = phenotype[phenotype_name + '.2nd_visit'] - phenotype[phenotype_name + '.1st_visit']
-#
-#         phenotype = phenotype[[SAMPLE_ID, phenotype_name + '.diff']]
-#
-#         phenotype = pd.merge(phenotype, pd.DataFrame({SAMPLE_ID: ukb_phenotypes[SAMPLE_ID],
-#                                                       'time': ukb_phenotypes[AGE_2nd_visit] -
-#                                                               ukb_phenotypes[AGE_1st_visit]}))
-#
-#         phenotype['__CONST__'] = 1
-#
-#         # try to fix regression to the mean problem
-#         centered_baseline = cor_phenotype_first_visit[phenotype_name] - np.mean(
-#             cor_phenotype_first_visit[phenotype_name])
-#
-#         echo('Mean static_no_corrected.1st_visit=', np.mean(cor_phenotype_first_visit[phenotype_name]))
-#
-#         diff_df = pd.DataFrame({SAMPLE_ID: cor_phenotype_first_visit[SAMPLE_ID],
-#                                 phenotype_name + '.1st_visit.centered': centered_baseline}).dropna()
-#
-#         phenotype = pd.merge(phenotype, diff_df, on=SAMPLE_ID)
-#
-#         meds_all_cols = ukb_phenotypes[[SAMPLE_ID] + MEDICATIONS_FIRST_VISIT + MEDICATIONS_SECOND_VISIT].copy()
-#
-#         # meds_all_cols = meds_all_cols.dropna(how='all', subset=MEDICATIONS_FIRST_VISIT)
-#         # meds_all_cols = meds_all_cols.dropna(how='all', subset=MEDICATIONS_SECOND_VISIT)
-#
-#         meds = meds_all_cols[[SAMPLE_ID]].copy()
-#         first_meds_int = meds_all_cols[[SAMPLE_ID]].copy()
-#
-#         on_med_first_visit_labels_dict = {}
-#
-#         medication_dummies = {}
-#
-#         for medication_name, medication_codes in medications.items():
-#
-#             on_med_first_visit = 'on_med.' + medication_name + '.1st_visit.' + sex
-#             on_med_first_visit_labels_dict[medication_name] = on_med_first_visit
-#
-#             on_meds = 'med.' + medication_name + '.' + sex
-#
-#             fst = meds_all_cols[MEDICATIONS_FIRST_VISIT].isin(medication_codes).any(axis=1).astype(int)
-#             first_meds_int[on_med_first_visit] = fst
-#
-#             sec = meds_all_cols[MEDICATIONS_SECOND_VISIT].isin(medication_codes).any(axis=1).astype(int)
-#
-#             on_meds_dummies = pd.get_dummies(fst + 2 * sec, prefix=on_meds)
-#
-#             for label in list(on_meds_dummies):
-#                 # echo(label, 'n=', np.sum(on_meds_dummies[label] if label in list(on_meds_dummies) else 0))
-#                 meds[label] = on_meds_dummies[label]
-#
-#             medication_dummies[medication_name] = list(on_meds_dummies)
-#
-#         phenotype = pd.merge(phenotype, meds, on=SAMPLE_ID)
-#
-#         to_exclude = set()
-#         for medication_name in medications:
-#             for i in range(4):
-#                 d_label = 'med.' + medication_name + '.' + sex + '_%d' % i
-#                 if d_label not in list(phenotype) or np.sum(phenotype[d_label]) < min_subjects_per_category:
-#                     to_exclude.add(medication_name)
-#
-#         for medication_name in sorted(to_exclude):
-#             echo('Excluding medications due to insufficient data:', medication_name)
-#             del medication_dummies[medication_name]
-#
-#         all_medications = list(medication_dummies)
-#         all_med_dummies = [d for m in medication_dummies for d in medication_dummies[m]]
-#
-#         echo('Regressing out medication effects and time between visits with n=', len(phenotype), 'samples')
-#
-#         y_label = phenotype_name + '.diff'
-#
-#         static_covariates = [c for c in list(phenotype) if c not in [SAMPLE_ID, y_label] and not c.startswith('med.')]
-#
-#         def fit_regression(phenotype, y_label, covariates, return_pvalue_for, phenotype_is_binary):
-#
-#             if phenotype_is_binary:
-#                 regr_model_type = sm.Logit
-#             else:
-#                 regr_model_type = sm.OLS
-#
-#             regression_model = regr_model_type(phenotype[y_label],
-#                                                phenotype[covariates])
-#
-#             with warnings.catch_warnings():
-#                 warnings.filterwarnings("ignore")
-#                 regression_result = regression_model.fit()
-#
-#             return regression_result.pvalues[return_pvalue_for]
-#
-#         P_VALUE_THRESHOLD = 1e-3
-#
-#         associated_med_dummies = []
-#         associated_meds = []
-#
-#         best_pvalue = 0
-#         best_med = None
-#
-#         while best_pvalue <= P_VALUE_THRESHOLD:
-#
-#             medication_pvalues = {}
-#
-#             if best_med is not None:
-#                 associated_med_dummies.extend(medication_dummies[best_med])
-#                 associated_meds.append(best_med)
-#
-#                 del medication_dummies[best_med]
-#
-#             if len(medication_dummies) == 0:
-#                 break
-#
-#             for medication_name in medication_dummies:
-#                 med_dummies = medication_dummies[medication_name]
-#                 medication_pvalues[medication_name] = fit_regression(phenotype,
-#                                                                      y_label,
-#                                                                      static_covariates + associated_med_dummies + med_dummies,
-#                                                                      med_dummies[2],
-#                                                                      phenotype_is_binary)
-#
-#             best_med, best_pvalue = min(medication_pvalues.items(), key=lambda kv: kv[1])
-#
-#         corrected_phenotype = pd.merge(cor_phenotype_first_visit,
-#                                        cor_phenotype_second_visit.rename(columns={phenotype_name: phenotype_name + '.2nd_visit.static_no_med_corrected',
-#                                                                                   phenotype_name + '.original': phenotype_name + '.2nd_visit.original'}),
-#                                        on=SAMPLE_ID,
-#                                        how='left')
-#
-#         corrected_phenotype = pd.merge(corrected_phenotype, phenotype[[SAMPLE_ID] + all_med_dummies], on=SAMPLE_ID, how='left')
-#         corrected_phenotype = pd.merge(corrected_phenotype,
-#                                        first_meds_int[[SAMPLE_ID] +
-#                                                       [on_med_first_visit_labels_dict[m] for m in all_medications]],
-#                                        on=SAMPLE_ID)
-#
-#         for medication_name in all_medications:
-#             corrected_phenotype['on_med.' + medication_name + '.2nd_visit.' + sex] = corrected_phenotype[
-#                                                                                              'med.' + medication_name + '.' + sex + '_2'] + \
-#                                                                                          corrected_phenotype[
-#                                                                                              'med.' + medication_name + '.' + sex + '_3']
-#
-#         for medication_name in all_medications:
-#             corrected_phenotype['is_associated_med.' + medication_name] = int(medication_name in associated_meds)
-#
-#         if len(associated_meds) > 0:
-#
-#             correction_NO_meds_labels = ['med.' + medication_name + '.' + sex + '_0' for medication_name in associated_meds]
-#             correction_ON_meds_labels = ['med.' + medication_name + '.' + sex + '_2' for medication_name in associated_meds]
-#
-#             regression_model = sm.OLS(phenotype[y_label],
-#                                       phenotype[static_covariates + associated_med_dummies])
-#
-#             with warnings.catch_warnings():
-#                 warnings.filterwarnings("ignore")
-#                 regression_result = regression_model.fit()
-#
-#             echo(regression_result.summary())
-#
-#             on_med_first_visit_labels = [on_med_first_visit_labels_dict[m] for m in associated_meds]
-#             med_info_for_static_correction = corrected_phenotype[[SAMPLE_ID] + on_med_first_visit_labels]
-#
-#             # compute the difference of differences for the effect of each drug:
-#             # first get effects of starting the drugs
-#             correction_ON_meds = regression_result.params[correction_ON_meds_labels].to_numpy()
-#             # subtract effects of not taking the drug
-#             correction_ON_meds -= regression_result.params[correction_NO_meds_labels].to_numpy()
-#
-#             echo('medications=', correction_ON_meds_labels,
-#                  'on_meds_betas=', list(regression_result.params[correction_ON_meds_labels]),
-#                  'on_meds_p-value=', list(regression_result.pvalues[correction_ON_meds_labels]),
-#                  'no_meds_betas=', list(regression_result.params[correction_NO_meds_labels]),
-#                  'no_meds_p-value=', list(regression_result.pvalues[correction_NO_meds_labels]),
-#                  'corrections=', list(correction_ON_meds),
-#                  'phenotype=', phenotype_name)
-#
-#             correction_ON_meds = correction_ON_meds * corrected_phenotype[on_med_first_visit_labels].to_numpy()
-#             correction_ON_meds = correction_ON_meds.sum(axis=1)
-#
-#             to_report = pd.DataFrame({'p-value': regression_result.pvalues[[c for c in associated_med_dummies]],
-#                                       'beta': regression_result.params[[c for c in associated_med_dummies]],
-#                                       'phenotype': [phenotype_name] * len(associated_med_dummies),
-#                                       'med_label': associated_med_dummies})
-#
-#             for r_idx, row in to_report.iterrows():
-#                 echo('FINDINGS:', 'pvalue= %lf' % row['p-value'], 'beta= %lf' % row['beta'], 'phenotype= %s' % row['phenotype'], 'medication= %s' % row['med_label'], 'n= %d' % np.sum(phenotype[r_idx]), sep='\t')
-#
-#         else:
-#             echo('NO MEDICATIONS WERE FOUND TO AFFECT THIS PHENOTYPE')
-#             correction_ON_meds = 0
-#
-#             on_med_first_visit_labels = [on_med_first_visit_labels_dict[m] for m in all_medications]
-#             med_info_for_static_correction = corrected_phenotype[[SAMPLE_ID] + on_med_first_visit_labels]
-#
-#             # med_info_for_static_correction = pd.merge(corrected_phenotype,
-#             #                                           first_meds_int[[SAMPLE_ID] + on_med_first_visit_labels],
-#             #                                           on=SAMPLE_ID)[[SAMPLE_ID] + on_med_first_visit_labels]
-#
-#         corrected_phenotype[phenotype_name + '.corrected'] = (corrected_phenotype[phenotype_name] - correction_ON_meds)
-#
-#         static_med_corrected = regress_out_covariates_from_ukb_phenotype( ukb_phenotypes,
-#                                                                           str(phenotype_code) + '-0.0',
-#                                                                           phenotype_name,
-#                                                                           recode_covariates(covariates_to_regress,
-#                                                                                             visit=1),
-#                                                                           sex,
-#                                                                           bias=True,
-#                                                                           log_dir=log_dir,
-#                                                                           irnt_transform=irnt_transform,
-#                                                                           additional_covariates=med_info_for_static_correction,
-#                                                                           fig_label='1st_visit.static_med_correction.all_meds',
-#                                                                           phenotype_is_binary=phenotype_is_binary,
-#                                                                           impute_missing_covatiates=impute_missing_covatiates
-#                                                                           )
-#
-#         corrected_phenotype = pd.merge(corrected_phenotype,
-#                                        static_med_corrected[[SAMPLE_ID, phenotype_name]],
-#                                        on=SAMPLE_ID,
-#                                        suffixes=['', '.static_med_corrected'])
-#
-#         for medication_name in associated_meds:
-#             on_med_first_visit = on_med_first_visit_labels_dict[medication_name]
-#
-#             on_meds = corrected_phenotype[corrected_phenotype[on_med_first_visit] == 1]
-#             rest = corrected_phenotype[corrected_phenotype[on_med_first_visit] == 0]
-#
-#             only_on_this_med = corrected_phenotype[corrected_phenotype[on_med_first_visit] == 1]
-#             on_no_meds = corrected_phenotype[corrected_phenotype[on_med_first_visit] == 0]
-#             for other_med in associated_meds:
-#                 if other_med != medication_name:
-#                     other_med_first_visit_label = on_med_first_visit_labels_dict[other_med]
-#                     only_on_this_med = only_on_this_med[only_on_this_med[other_med_first_visit_label] == 0]
-#                     on_no_meds = on_no_meds[on_no_meds[other_med_first_visit_label] == 0]
-#
-#             if len(on_no_meds) == 0:
-#                 on_no_meds = rest
-#
-#             for fgr, bgr, fig_label in [(on_meds, rest, 'all'), (only_on_this_med, on_no_meds, 'only')]:
-#
-#                 n_subjects = len(fgr)
-#
-#                 if n_subjects == 0:
-#                     echo(on_med_first_visit, fig_label, 'IRNT=', str(irnt_transform), 'NO CASES FOUND')
-#                     continue
-#
-#                 n_bgr = len(bgr)
-#
-#                 before_RS = scipy.stats.ranksums(fgr[phenotype_name], bgr[phenotype_name])
-#
-#                 after_RS = scipy.stats.ranksums(fgr[phenotype_name + '.corrected'], bgr[phenotype_name + '.corrected'])
-#
-#                 echo(on_med_first_visit, fig_label, 'IRNT=', str(irnt_transform), ', before_RS=', before_RS, ', after_RS=', after_RS)
-#
-#                 fig = plt.figure(figsize=(15, 15))
-#
-#                 plt.title(phenotype_name + ', sex= ' + sex + ', med= ' + medication_name + (' (%s) ' % fig_label) + ', n_on_med= ' + str(n_subjects) + ', n_rest= ' + str(n_bgr))
-#                 if bgr is rest:
-#                     bgr_label_suffix = '(all)'
-#                 else:
-#                     bgr_label_suffix = '(no rel. meds)'
-#
-#                 for on_meds_status, ph_name, label in [ (0, phenotype_name + '.corrected', 'dynamic med corr, rest ' + bgr_label_suffix),
-#                                                         (1, phenotype_name + '.corrected', 'dynamic med corr, ON ' + medication_name + ' (%s)' % fig_label),
-#                                                         (0, phenotype_name + '.static_med_corrected', 'static med corr, rest ' + bgr_label_suffix),
-#                                                         (1, phenotype_name + '.static_med_corrected', 'static med corr, ON ' + medication_name + ' (%s)' % fig_label),
-#                                                         (0, phenotype_name, 'original, rest ' + bgr_label_suffix),
-#                                                         (1, phenotype_name, 'original, ON ' + medication_name + ' (%s)' % fig_label)]:
-#
-#                     if on_meds_status == 1:
-#                         fgr_values = fgr[ph_name]
-#                         bgr_values = bgr[ph_name]
-#                     else:
-#                         fgr_values = bgr[ph_name]
-#                         bgr_values = fgr[ph_name]
-#
-#                     pval = scipy.stats.ranksums(fgr_values, bgr_values)[1]
-#
-#                     if pval == 0:
-#                         pval = 1e-300
-#
-#                     if np.isnan(pval):
-#                         l10_p = 'NaN'
-#                     else:
-#                         l10_p = str(int(math.log(pval, 10)))
-#
-#                     f_mean = np.mean(fgr_values)
-#                     mdiff = f_mean - np.mean(bgr_values)
-#
-#                     sns.distplot(fgr_values, label=label + ', m= %.3lf, diff= %.3lf' % (f_mean, mdiff) + ', log10_P=' + l10_p)
-#
-#                 plt.legend(loc='upper right')
-#                 plt.show()
-#                 if log_dir is not None:
-#                     fig.savefig(log_dir + '/' + phenotype_name + '.' + sex + '.' + 'MED_' +
-#                                                 remove_special_chars(medication_name)[:100] + '.' +
-#                                                 fig_label +
-#                                                 '.IRNT_' + str(irnt_transform) + '.png', dpi=100)
-#
-#         final_result.append(corrected_phenotype.rename(columns={phenotype_name: phenotype_name + '.static_no_med_corrected',
-#                                                                 phenotype_name + '.corrected': phenotype_name + '.dynamic_med_corrected'}))
-#
-#     irnt_labels_to_keep = [phenotype_name + '.original',
-#                            phenotype_name + '.static_no_med_corrected',
-#
-#                            phenotype_name + '.2nd_visit.original',
-#                            phenotype_name + '.2nd_visit.static_no_med_corrected',
-#
-#                            phenotype_name + '.static_med_corrected',
-#                            phenotype_name + '.dynamic_med_corrected'] + \
-#                           [c for c in list(final_result[1]) if c.startswith('is_associated_med.')]
-#
-#     to_return = pd.merge(final_result[0],
-#                          final_result[1][[SAMPLE_ID] + irnt_labels_to_keep],
-#                          on=SAMPLE_ID,
-#                          suffixes=['.RAW', '.IRNT'])
-#
-#     if return_covariates:
-#         covariates_from_1st_visit = get_covariates(ukb_phenotypes, recode_covariates(covariates_to_regress, visit=1), bias=False)
-#         covariates_from_1st_visit = pd.merge(covariates_from_1st_visit,
-#                                              ukb_phenotypes[[SAMPLE_ID, AGE_2nd_visit]],
-#                                              how='left').rename(columns={AGE_2nd_visit: 'age.2nd_visit'})
-#
-#         to_return = pd.merge(to_return, covariates_from_1st_visit, on=SAMPLE_ID)
-#
-#     return to_return
-#
 
 def get_cases_for_ICD10_group(phenotypes, icd10_group, icd10_column_ids=None):
 
@@ -1891,8 +1030,6 @@ def get_job_info(min_samples=100):
             except:
                 continue
 
-            # job_name = job_id_to_name[job_id]
-
             c_node = job_id
             children = set()
             while c_node is not None:
@@ -1918,11 +1055,6 @@ def get_job_info(min_samples=100):
             everyones_jobs['job.' + job_name] = np.where(everyones_jobs['has_job_entry'] == 1,
                                                          everyones_jobs[job_column_ids].isin(job_children).any(axis=1).astype(int),
                                                          np.nan)
-
-    # echo('Returning job counts:', len(job_counts))
-    # job_counts_df = pd.DataFrame({'job_name': [job_id_to_name[jid] for jid in sorted(job_counts)],
-    #                               'count': [job_counts[jid] for jid in sorted(job_counts)]}).sort_values('count',
-    #                                                                                                       ascending=False)
 
     jobs_table = everyones_jobs[[c for c in list(everyones_jobs) if c not in job_column_ids]].copy()
 
@@ -1951,12 +1083,8 @@ def plot_top_genes_per_UKB_phenotype(blood_biomarkers_results, corrected_phenoty
 
         ph, sex = ph_sex.split('.')
 
-        # if sex in [MALE, FEMALE]:
-        #     if ph not in ['Testosterone', 'Oestradiol', 'SHBG']:
-        #         continue
         echo(ph_sex)
 
-        # ph = ph.replace('_', ' ')
         rvt = blood_biomarkers_results[ph_sex]
 
         for pval_label in ['ptv|rs_pval', 'missense|rs_pval']:
@@ -2007,7 +1135,6 @@ def plot_top_genes_per_UKB_phenotype(blood_biomarkers_results, corrected_phenoty
                             ptv_samples[gene_name] = [(s_id, pos) for s_ids, pos in zip(gene_variants.info[ALL_SAMPLES],
                                                                                         gene_variants.info[VCF_POS])
                                                       for s_id in s_ids.split(',')]
-                        #                             echo(ptv_samples[gene_name])
                         elif vt is VCF_MISSENSE_VARIANT:
 
                             missense_samples[gene_name] = {}
@@ -2057,7 +1184,6 @@ def plot_top_genes_per_UKB_phenotype(blood_biomarkers_results, corrected_phenoty
 
             for gene_name in list(vt_genes[GENE_NAME]):
                 ptv_sample_ids = ptv_samples[gene_name]
-                #                 echo(sample_ids)
 
                 ptv_vs_pos = pd.merge(all_values,
                                       pd.DataFrame({SAMPLE_ID: [s[0] for s in ptv_sample_ids],
@@ -2084,7 +1210,6 @@ def plot_top_genes_per_UKB_phenotype(blood_biomarkers_results, corrected_phenoty
                                                    PRIMATEAI_SCORE: [missense_samples[gene_name][s] for s in
                                                                      sorted(missense_samples[gene_name])]})).dropna()
 
-                #                 display(pAI_vs_ph)
                 if len(pAI_vs_ph) > 10:
                     pAI_vs_ph[ph + ' rank'] = scipy.stats.rankdata(pAI_vs_ph[ph])
 
@@ -2222,11 +1347,9 @@ def plot_phenotype_for_cariers(all_gene_var_info,
         cur_phenotype_label = phenotype_name.replace('_', ' ').replace('.', ':')
 
         all_values = phenotype_data[[SAMPLE_ID, phenotype_name]].dropna().copy()
-        # all_values[phenotype_name] = scipy.stats.zscore(all_values[phenotype_name])
 
         all_values_sorted = sorted(all_values[phenotype_name])
 
-        #     display(gene_variants.full())
         bins = np.linspace(all_values_sorted[0], all_values_sorted[-1], 50)
 
         if find_best_AC_threshold:
@@ -2262,11 +1385,9 @@ def plot_phenotype_for_cariers(all_gene_var_info,
 
         # correct for multiple testing
         best_pval *= len(ac_thresholds)
-        # echo(gene_name, var_label, best_pval)
 
         label = gene_name + ' ' + var_label + ', n=' + str(len(fgr_samples_values))
 
-        #     samples_values = [sv for sv in samples_values if lo_q <= sv <= hi_q]
         if find_best_AC_threshold:
             label += ', n_tests=%d' % len(ac_thresholds)
 
@@ -2295,7 +1416,6 @@ def test_ukb_phenotypes_for_rare_variants_associations(variants,
                                                        find_best_AC_threshold=False,
                                                        find_best_pAI_threhold=False,
                                                        variant_types=None,
-                                                       # data_is_ranked=False,
                                                        ref_phenotype=None,
                                                        ref_group=None):
 
@@ -2340,7 +1460,6 @@ def test_ukb_phenotypes_for_rare_variants_associations(variants,
 
         best_threshold = np.nan
         best_pvalue = 1
-        # best_enrichment = 1
         best_odds_ratio = np.nan
 
         fgr_idx = 0
@@ -2358,7 +1477,6 @@ def test_ukb_phenotypes_for_rare_variants_associations(variants,
         else:
             min_gene_score = x.iloc[0]['primateAI score_min']
             max_gene_score = x.iloc[0]['primateAI score_max']
-            # echo(x.iloc[0][GENE_NAME], ', min_max scores:', min_gene_score, max_gene_score)
             thresholds = np.linspace(min_gene_score, max_gene_score, MAX_NUMBER_OF_THRESHOLDS)
 
         for score_threshold in thresholds:
@@ -2661,8 +1779,6 @@ def test_ukb_phenotypes_for_rare_variants_associations(variants,
 
         best_return_dict = None
         best_pval = 1
-        # pval_label = 'per_var_pval'
-        # pval_label = 'per_sample_pval'
 
         for return_dict in results_at_different_ac_thresholds:
             if phenotype_is_binary:
@@ -2684,7 +1800,6 @@ def test_ukb_phenotypes_for_rare_variants_associations(variants,
         if best_return_dict is None:
             echo('ERROR:', gene_name)
 
-        # echo(gene_name, 'done')
         return pd.Series(best_return_dict)
 
     result = None
@@ -2762,235 +1877,14 @@ def test_ukb_phenotypes_for_rare_variants_associations(variants,
                                                        phenotype_name,
                                                        n_case_variants,
                                                        n_control_variants)
-        # print(new_result.head())
         sort_by = vlabel + '|per_sample_pval'
 
         new_result = new_result.sort_values(sort_by)
         new_result = new_result.reset_index()
 
-        # echo('\n', new_result.head(20))
         result = merge_results(result, new_result)
 
     return result
-
-# def test_ukb_phenotypes_for_rare_variants_associations(variants,
-#                                                        phenotype,
-#                                                        phenotype_is_binary=False,
-#                                                        use_exclusive_variants_only=False,
-#                                                        phenotype_name=None,
-#                                                        find_best_AC_threshold=False):
-#
-#     MISSENSE_LABEL = 'missense'
-#
-#     if phenotype_name is None:
-#         phenotype_name = [c for c in list(phenotype) if c != SAMPLE_ID][0]
-#
-#     echo('Testing for rare variants associations:', phenotype_name,
-#          ', binary:', phenotype_is_binary,
-#          ', use_exclusive_variants_only:', use_exclusive_variants_only)
-#
-#     def get_samples(varinfo, homozygotes_only=False, heterozygotes_only=False):
-#         tag = 'all_samples'
-#         if homozygotes_only:
-#             tag = 'homozygotes'
-#         elif heterozygotes_only:
-#             tag = 'heterozygotes'
-#
-#         samples = sorted(set(sid for sids in varinfo[tag] for sid in sids.split(',')))
-#
-#         return samples
-#
-#     def ranksum_test(x, vlabel, phenotype, phenotype_name, n_case_variants, n_control_variants):
-#
-#         gene_name = x.iloc[0][GENE_NAME]
-#
-#         if ranksum_test.cnt % 5000 == 0:
-#             echo(ranksum_test.cnt, 'genes tested. current gene:', gene_name)
-#
-#         ranksum_test.cnt += 1
-#
-#         sample_ids = get_samples(x)
-#
-#         samples_phenotypes = pd.merge(phenotype, pd.DataFrame({SAMPLE_ID: sample_ids}))
-#         return_dict = {}
-#
-#         if len(samples_phenotypes) == 0:
-#             if phenotype_is_binary:
-#                 return_dict.update({vlabel + '|n_fgr_variants': 0,
-#                                     vlabel + '|n_bgr_variants': 0,
-#                                     vlabel + '|n_total_fgr_variants': n_case_variants,
-#                                     vlabel + '|n_total_bgr_variants': n_control_variants,
-#                                     vlabel + '|chi2_OR': 0,
-#                                     vlabel + '|chi2_pval': 1})
-#
-#             return_dict.update({vlabel + '|n_fgr_samples': len(samples_phenotypes),
-#                                 vlabel + '|n_bgr_samples': len(phenotype),
-#                                 vlabel + '|fgr_mean': 0,
-#                                 vlabel + '|bgr_mean': 0,
-#                                 vlabel + '|mean_diff': 0,
-#                                 vlabel + '|rs_stat': -1,
-#                                 vlabel + '|rs_pval': 1})
-#
-#             if vlabel == MISSENSE_LABEL:
-#                 return_dict[vlabel + '|pAI_spearman_r'] = 0
-#                 return_dict[vlabel + '|pAI_spearman_pval'] = 1
-#
-#             return pd.Series(return_dict)
-#
-#         samples_values = samples_phenotypes[phenotype_name]
-#         non_samples_values = phenotype[~phenotype[SAMPLE_ID].isin(sample_ids)][phenotype_name]
-#
-#         fgr_mean = np.mean(samples_values)
-#         bgr_mean = np.mean(non_samples_values)
-#
-#         mean_diff = fgr_mean - bgr_mean
-#
-#         if phenotype_is_binary:
-#
-#             fgr_with_phenotype = int(np.sum(samples_values))
-#             bgr_with_phenotype = int(np.sum(non_samples_values))
-#
-#             rs_pval = chi2_or_fisher_test([[fgr_with_phenotype, len(samples_values) - fgr_with_phenotype],
-#                                            [bgr_with_phenotype, len(non_samples_values) - bgr_with_phenotype]])
-#             rs_stat = -1
-#
-#             n_case_variants_in_gene = np.sum(x['in_cases'])
-#             n_control_variants_in_gene = np.sum(x['in_controls'])
-#
-#             chi2_pval = chi2_or_fisher_test([[n_case_variants_in_gene, n_case_variants - n_case_variants_in_gene],
-#                                              [n_control_variants_in_gene, n_control_variants - n_control_variants_in_gene]])
-#
-#             odds_r = odds_ratio(n_case_variants_in_gene, n_case_variants, n_control_variants_in_gene, n_control_variants)
-#
-#             return_dict.update({
-#                 vlabel + '|n_fgr_variants': n_case_variants_in_gene,
-#                 vlabel + '|n_bgr_variants': n_control_variants_in_gene,
-#                 vlabel + '|n_total_fgr_variants': n_case_variants,
-#                 vlabel + '|n_total_bgr_variants': n_control_variants,
-#                 vlabel + '|chi2_OR': odds_r,
-#                 vlabel + '|chi2_pval': chi2_pval
-#             })
-#
-#         else:
-#             rs_stat, rs_pval = scipy.stats.ranksums(samples_values, non_samples_values)
-#
-#         return_dict.update({vlabel + '|n_fgr_samples': len(samples_values),
-#                             vlabel + '|n_bgr_samples': len(non_samples_values),
-#                             vlabel + '|fgr_mean': fgr_mean,
-#                             vlabel + '|bgr_mean': bgr_mean,
-#                             vlabel + '|mean_diff': mean_diff,
-#                             vlabel + '|rs_stat': rs_stat,
-#                             vlabel + '|rs_pval': rs_pval})
-#
-#         if vlabel == MISSENSE_LABEL:
-#             pAI_scores = {}
-#
-#             for row_idx in range(len(x)):
-#
-#                 row_samples = x.iloc[row_idx][ALL_SAMPLES].split(',')
-#                 pAI = x.iloc[row_idx][PRIMATEAI_SCORE]
-#
-#                 if np.isnan(pAI):
-#                     continue
-#
-#                 for s_id in row_samples:
-#                     if s_id in pAI_scores:
-#                         pAI_scores[s_id] = max(pAI_scores[s_id], pAI)
-#                     else:
-#                         pAI_scores[s_id] = pAI
-#
-#             pAI_scores_df = pd.merge(samples_phenotypes,
-#                                      pd.DataFrame({SAMPLE_ID: sorted(pAI_scores),
-#                                                    PRIMATEAI_SCORE: [pAI_scores[s_id] for s_id in sorted(pAI_scores)]}),
-#                                      on=SAMPLE_ID)
-#
-#             if phenotype_is_binary:
-#                 phenotype_true_scores = pAI_scores_df[pAI_scores_df[phenotype_name] == 1][PRIMATEAI_SCORE]
-#                 phenotype_false_scores = pAI_scores_df[pAI_scores_df[phenotype_name] == 0][PRIMATEAI_SCORE]
-#                 sp_r, sp_pval = scipy.stats.ranksums(phenotype_true_scores, phenotype_false_scores)
-#
-#             else:
-#                 sp_r, sp_pval = scipy.stats.spearmanr(pAI_scores_df[phenotype_name], pAI_scores_df[PRIMATEAI_SCORE])
-#
-#             return_dict[vlabel + '|pAI_spearman_r'] = sp_r
-#             return_dict[vlabel + '|pAI_spearman_pval'] = sp_pval
-#
-#         return pd.Series(return_dict)
-#
-#     result = None
-#
-#     def merge_results(prev_result, new_result):
-#         if prev_result is None:
-#             return new_result
-#         else:
-#             return pd.merge(prev_result, new_result, on=GENE_NAME, how='outer')
-#
-#     full = variants.full().copy()
-#
-#     for vtype, vlabel in [(DELETERIOUS_VARIANT, DELETERIOUS_VARIANT),
-#                           (ALL_PTV, 'ptv'),
-#                           (VCF_MISSENSE_VARIANT, MISSENSE_LABEL)
-#
-#
-#                           # (VCF_SYNONYMOUS_VARIANT, 'syn')
-#                           ]:
-#
-#         echo('Testing:', vlabel)
-#
-#         if vtype is not DELETERIOUS_VARIANT:
-#             if type(vtype) is not list:
-#                 vtype = [vtype]
-#             cur_full = full[full[VCF_CONSEQUENCE].isin(vtype)].copy()
-#         else:
-#
-#             cur_full = filter_variants(variants, consequence=DELETERIOUS_VARIANT).full().copy()
-#
-#         n_variants = len(cur_full)
-#         all_sample_ids = get_samples(cur_full)
-#         echo('n_variants=', n_variants, 'from n_genes=', len(cur_full.drop_duplicates(GENE_NAME)), 'from n_samples=', len(all_sample_ids))
-#
-#         n_case_variants = None
-#         n_control_variants = None
-#
-#         if phenotype_is_binary:
-#             case_samples = set(phenotype[phenotype[phenotype_name] == 1][SAMPLE_ID])
-#             control_samples = set(phenotype[phenotype[phenotype_name] == 0][SAMPLE_ID])
-#
-#             cur_full['in_cases'] = [any(sid in case_samples for sid in sids.split(','))
-#                                                         for sids in cur_full['all_samples']]
-#
-#             cur_full['in_controls'] = [any(sid in control_samples for sid in sids.split(','))
-#                                        for sids in cur_full['all_samples']]
-#
-#             if use_exclusive_variants_only:
-#                 cur_full = cur_full[cur_full['in_cases'] ^ cur_full['in_controls']]
-#
-#             n_case_variants = np.sum(cur_full['in_cases'])
-#             n_control_variants = np.sum(cur_full['in_controls'])
-#
-#             echo('n_case_variants=', n_case_variants, ', per sample=', float(n_case_variants) / len(case_samples))
-#             echo('n_control_variants=', n_control_variants, ', per sample=', float(n_control_variants) / len(control_samples))
-#
-#         ranksum_test.cnt = 0
-#         new_result = cur_full.groupby(GENE_NAME).apply(ranksum_test,
-#                                                        vlabel,
-#                                                        phenotype,
-#                                                        phenotype_name,
-#                                                        n_case_variants,
-#                                                        n_control_variants)
-#         if phenotype_is_binary:
-#             sort_by = vlabel + '|chi2_pval'
-#         else:
-#             sort_by = vlabel + '|rs_pval'
-#
-#         new_result = new_result.sort_values(sort_by)
-#         new_result = new_result.reset_index()
-#
-#         # echo('\n', new_result.head(20))
-#         result = merge_results(result, new_result)
-#
-#     return result
-#
 
 def test_quantitative_ukb_phenotype_for_rare_variants_associations(variants,
                                                                    phenotype,
@@ -3182,9 +2076,6 @@ def test_quantitative_ukb_phenotype_for_rare_variants_associations(variants,
     for vtype, vlabel in [(DELETERIOUS_VARIANT, DELETERIOUS_VARIANT),
                           (ALL_PTV, 'ptv'),
                           (VCF_MISSENSE_VARIANT, MISSENSE_LABEL)
-
-
-                          # (VCF_SYNONYMOUS_VARIANT, 'syn')
                           ]:
 
         echo('Testing:', vlabel)
@@ -3238,7 +2129,6 @@ def test_quantitative_ukb_phenotype_for_rare_variants_associations(variants,
         new_result = new_result.sort_values(sort_by)
         new_result = new_result.reset_index()
 
-        # echo('\n', new_result.head(20))
         result = merge_results(result, new_result)
 
     return result
@@ -3251,7 +2141,6 @@ def test_multiple_quantitative_ukb_phenotype_for_rare_variants_associations(vari
                                                                             phenotype_names=None,
                                                                             find_best_AC_threshold=False):
 
-    # echo('New')
     MISSENSE_LABEL = 'missense'
 
     echo('Testing for rare variants associations:', phenotype_names,
@@ -3322,39 +2211,6 @@ def test_multiple_quantitative_ukb_phenotype_for_rare_variants_associations(vari
                                     vlabel + '|' + phenotype_name + '|max_AC': max_AC
                                     })
 
-            # if vlabel == MISSENSE_LABEL:
-            #     pAI_scores = {}
-            #
-            #     for row_idx in range(len(variants_at_AC_threhold)):
-            #
-            #         row_samples = variants_at_AC_threhold.iloc[row_idx][ALL_SAMPLES].split(',')
-            #         pAI = variants_at_AC_threhold.iloc[row_idx][PRIMATEAI_SCORE]
-            #
-            #         if np.isnan(pAI):
-            #             continue
-            #
-            #         for s_id in row_samples:
-            #             if s_id in pAI_scores:
-            #                 pAI_scores[s_id] = max(pAI_scores[s_id], pAI)
-            #             else:
-            #                 pAI_scores[s_id] = pAI
-            #
-            #     pAI_scores_df = pd.merge(samples_phenotypes,
-            #                              pd.DataFrame({SAMPLE_ID: sorted(pAI_scores),
-            #                                            PRIMATEAI_SCORE: [pAI_scores[s_id] for s_id in sorted(pAI_scores)]}),
-            #                              on=SAMPLE_ID)
-            #
-            #     if phenotype_is_binary:
-            #         phenotype_true_scores = pAI_scores_df[pAI_scores_df[phenotype_name] == 1][PRIMATEAI_SCORE]
-            #         phenotype_false_scores = pAI_scores_df[pAI_scores_df[phenotype_name] == 0][PRIMATEAI_SCORE]
-            #         sp_r, sp_pval = scipy.stats.ranksums(phenotype_true_scores, phenotype_false_scores)
-            #
-            #     else:
-            #         sp_r, sp_pval = scipy.stats.spearmanr(pAI_scores_df[phenotype_name], pAI_scores_df[PRIMATEAI_SCORE])
-            #
-            #     return_dict[vlabel + '|pAI_spearman_r'] = sp_r
-            #     return_dict[vlabel + '|pAI_spearman_pval'] = sp_pval
-
         return_dict = {}
         for phenotype_name in phenotype_names:
             if len(phenotype_results[phenotype_name]) == 0:
@@ -3388,9 +2244,6 @@ def test_multiple_quantitative_ukb_phenotype_for_rare_variants_associations(vari
     for vtype, vlabel in [(DELETERIOUS_VARIANT, DELETERIOUS_VARIANT),
                           (ALL_PTV, 'ptv'),
                           (VCF_MISSENSE_VARIANT, MISSENSE_LABEL)
-
-
-                          # (VCF_SYNONYMOUS_VARIANT, 'syn')
                           ]:
 
         echo('Testing:', vlabel)
@@ -3410,32 +2263,6 @@ def test_multiple_quantitative_ukb_phenotype_for_rare_variants_associations(vari
         n_case_variants = None
         n_control_variants = None
 
-        # for phenotype_name in phenotype_names:
-        #     if phenotype_is_binary:
-        #         case_samples = set(phenotype[phenotype[phenotype_name] == 1][SAMPLE_ID])
-        #         control_samples = set(phenotype[phenotype[phenotype_name] == 0][SAMPLE_ID])
-        #
-        #         cur_full[phenotype_name + '.in_cases'] = [any(sid in case_samples for sid in sids.split(','))
-        #                                                         for sids in cur_full['all_samples']]
-        #
-        #         cur_full[phenotype_name + '.in_controls'] = [any(sid in control_samples for sid in sids.split(','))
-        #                                                         for sids in cur_full['all_samples']]
-        #
-        #         if use_exclusive_variants_only:
-        #             cur_full[phenotype_name + '.to_use'] = cur_full[phenotype_name + '.in_cases'] ^ cur_full[phenotype_name + '.in_controls']
-        #         else:
-        #             cur_full[phenotype_name + '.to_use'] = True
-        #
-        #         n_case_variants = np.sum(cur_full[phenotype_name + '.in_cases'])
-        #         n_control_variants = np.sum(cur_full[phenotype_name + '.in_controls'])
-        #
-        #         echo('n_case_variants=', n_case_variants, ', per sample=', float(n_case_variants) / len(case_samples))
-        #         echo('n_control_variants=', n_control_variants, ', per sample=', float(n_control_variants) / len(control_samples))
-        #
-        #     else:
-        #
-        #         cur_full[phenotype_name + '.to_use'] = True
-
         ranksum_test.cnt = 0
         new_result = cur_full.groupby(GENE_NAME).apply(ranksum_test,
                                                        vlabel,
@@ -3443,9 +2270,6 @@ def test_multiple_quantitative_ukb_phenotype_for_rare_variants_associations(vari
                                                        phenotype_names,
                                                        n_case_variants,
                                                        n_control_variants)
-        # if phenotype_is_binary:
-        #     sort_by = vlabel + '|chi2_pval'
-        # else:
 
         sort_by = vlabel + '|' + phenotype_names[0] + '|rs_pval'
 
@@ -3454,7 +2278,6 @@ def test_multiple_quantitative_ukb_phenotype_for_rare_variants_associations(vari
         new_result = new_result.sort_values(sort_by)
         new_result = new_result.reset_index()
 
-        # echo('\n', new_result.head(20))
         result = merge_results(result, new_result)
 
     return result
@@ -3529,11 +2352,6 @@ def get_per_med_group_subject_statistics(ukb_medications, ukb_phenotypes):
     for _, r in ukb_medications.iterrows():
         c_ids = r['med_category'].split('|')
         c_names = r['med_category_name'].split('|')
-
-        #             if len(c_ids) != len(c_names):
-        #                 echo('WARNING:')
-        #                 display(r)
-        #                 return None
 
         for c_id, c_name in zip(c_ids, c_names):
             if c_id not in all_cats:
@@ -3685,7 +2503,6 @@ def compute_PRS(common_variants_fname, phenotype_data, phenotype_name, exome_sam
 
 
 def test_prs(prs, sample_ids, phenotype_data, common_variants, ph_name, prs_label=None):
-    # display(pd.merge(pd.DataFrame({SAMPLE_ID : training_sample_ids}), ldl_direct).head())
 
     echo('Phenotype:', ph_name)
     sample_ids = sorted(set(sample_ids) & set(common_variants[SAMPLE_ID]) & set(phenotype_data[SAMPLE_ID]))
@@ -3693,7 +2510,6 @@ def test_prs(prs, sample_ids, phenotype_data, common_variants, ph_name, prs_labe
 
     echo('Selecting sample_ids from common variants')
     X = pd.merge(pd.DataFrame({SAMPLE_ID: sample_ids}), common_variants)
-    # X = common_variants.astype(float)
     X['__CONST__'] = 1
 
     echo(len(X), 'samples with', len(list(X)) - 1, 'predictors')
@@ -3708,7 +2524,6 @@ def test_prs(prs, sample_ids, phenotype_data, common_variants, ph_name, prs_labe
     res = prs.predict(X)
 
     echo('R^2 =', 1 - np.sum((res - Y) ** 2) / np.sum((Y - np.mean(Y)) ** 2))
-    # echo('R^2 =', np.sum((res - np.mean(Y)) ** 2) / np.sum((Y - np.mean(Y)) ** 2))
 
     echo('Pearson R=', str(scipy.stats.pearsonr(res, Y)))
     echo('Spearman R=', str(scipy.stats.spearmanr(res, Y)))
@@ -3719,99 +2534,6 @@ def test_prs(prs, sample_ids, phenotype_data, common_variants, ph_name, prs_labe
     result = pd.DataFrame({SAMPLE_ID: Y_order,
                            prs_label: res})
     return result
-
-#
-# def correlate_snps():
-#     import bgen
-#     from bgen.reader import BgenFile
-#
-#     variants = missenses
-#
-#     # bgen_files = {}
-#     # bgen_snp_array = {}
-#
-#     # for chrom in sorted(variants[VCF_CHROM].unique()):
-#
-#     #     chrom = 'chr' + chrom
-#     #     echo(chrom)
-#
-#     #     BGEN_DIR = ROOT_PATH + '/pfiziev/ukbiobank/data/array_genotypes/'
-#
-#     #     bgen_path = BGEN_DIR + f'ukb_imp_{chrom}_v3.bgen'
-#
-#     #     if chrom == 'chrX':
-#     #         sample_path = BGEN_DIR + f'ukb33751_imp_chrX_v3_s486669.sample'
-#     #     else:
-#     #         sample_path = BGEN_DIR + f'ukb33751_imp_{chrom}_v3_s487320.sample'
-#
-#     #     echo('Loading snp_info:', bgen_path, sample_path)
-#
-#     #     bgenf = BgenFile(bgen_path, sample_path, delay_parsing=False)
-#     #     bgen_files[chrom]= bgenf
-#     #     bgen_snp_array[chrom] = bgenf.rsids()
-#
-#     corr = {}
-#     pvals = {}
-#
-#     # variants = variants[variants[VCF_CHROM] != 'X']
-#     # variants = variants.sample(n=10).sort_values([VCF_CHROM, VCF_POS])
-#
-#     echo('n variants=', len(variants))
-#
-#     for r_idx_1, r_1 in variants.iterrows():
-#         if r_idx_1 % 1000 == 0:
-#             echo(r_idx_1, 'variants processed')
-#         rsid_1 = r_1['rsid']
-#
-#         corr[rsid_1] = {}
-#         pvals[rsid_1] = {}
-#         chrom_1 = 'chr' + r_1[VCF_CHROM]
-#         bgen_1 = bgen_files[chrom_1]
-#
-#         var_1_idx = bgen_snp_array[chrom_1].index(rsid_1)
-#         var_1 = bgen_1[var_1_idx]
-#
-#         echo(r_idx_1, chrom_1)
-#         if rsid_1 in ['rs145665583', 'rs144483053']:
-#             echo('1:', rsid_1)
-#
-#         for r_idx_2, r_2 in variants.iterrows():
-#
-#             if r_idx_1 < r_idx_2:
-#                 continue
-#
-#             rsid_2 = r_2['rsid']
-#             chrom_2 = 'chr' + r_2[VCF_CHROM]
-#
-#             bgen_2 = bgen_files[chrom_2]
-#
-#             var_2_idx = bgen_snp_array[chrom_2].index(rsid_2)
-#             var_2 = bgen_2[var_2_idx]
-#
-#             corr[rsid_1][rsid_2], pvals[rsid_1][rsid_2] = scipy.stats.pearsonr(var_1.minor_allele_dosage,
-#                                                                                var_2.minor_allele_dosage)
-#             if rsid_2 not in corr:
-#                 corr[rsid_2] = {}
-#                 pvals[rsid_2] = {}
-#             if rsid_1 in ['rs145665583', 'rs144483053'] and rsid_2 in ['rs145665583', 'rs144483053']:
-#                 echo('2:', rsid_1, rsid_2)
-#
-#             corr[rsid_2][rsid_1] = corr[rsid_1][rsid_2]
-#             pvals[rsid_2][rsid_1] = pvals[rsid_1][rsid_2]
-#
-#             if np.isnan(corr[rsid_2][rsid_1]) or np.isnan(corr[rsid_1][rsid_2]):
-#                 echo(rsid_1, rsid_2)
-#
-#     echo(corr)
-#     corr = pd.DataFrame(corr)
-#     corr = corr.loc[list(corr)]
-#
-#     pvals = pd.DataFrame(pvals)
-#     pvals = pvals.loc[list(pvals)]
-#
-#     display(corr)
-#     display(pvals)
-
 
 def load_bgen(chrom, load_snp_info=True, bgen_data_chrom_to_fname_mapping=None, verbose=True):
 
@@ -3875,7 +2597,6 @@ def get_dosages_from_bgen(bgenf, bgenf_snps_array, rsid, samples_idx=None, sampl
     genotypes = np.array([0, 1, 2])
 
     for var_idx in bgenf_snps_array.get(rsid, []):
-        # echo(rsid, var_idx)
         v = bgenf[var_idx]
 
         varid = re.sub(r'^0*', '', v.chrom) + ':' + str(v.pos) + ':' + ':'.join(v.alleles)
@@ -4409,8 +3130,6 @@ def find_interactions(snp_genotypes, ph_data, ph_name_label, gPC_data=None, perc
     for k in ['all', 'cases', 'ctrls']:
         mafs[k] = np.where(mafs[k] < 0.5, mafs[k], 1 - mafs[k])
 
-    # display(mafs.head())
-
     variants = sorted(mafs[(mafs['all'] >= min_af_in_case_ctrls) &
                            (mafs['cases'] >= min_af_in_case_ctrls) &
                            (mafs['ctrls'] >= min_af_in_case_ctrls)]['variant'])
@@ -4667,7 +3386,6 @@ def _find_interactions_batches(batch1_idx,
     seen = set()
     int_keys = []
     for v1 in varids_batch_1:
-        # echo(v1)
 
         for v2 in varids_batch_2:
             if (v1, v2) in seen or (v2, v1) in seen or v1 == v2:
@@ -4687,29 +3405,6 @@ def _find_interactions_batches(batch1_idx,
     corr, pval = vcorrcoef(int_df[[ph_name_label]], int_df[int_keys], axis='columns')
 
     return corr, pval
-    #
-    # int_df = pd.DataFrame(int_df)
-    #
-    #         # int_df = pd.DataFrame({v1: vars_batch_1[v1],
-    #         #                        v2: vars_batch_2[v2],
-    #         #                        int_key: vars_batch_1[v1] * vars_batch_2[v2],
-    #         #                        ph_name_label: vars_batch_1[ph_name_label]})
-    #         #
-    #         # resid = get_residuals(int_df, [int_key, ph_name_label], [v1, v2], verbose=False)
-    #
-    #         resid = pd.DataFrame({int_key: vars_batch_1[v1] * vars_batch_2[v2],
-    #                               ph_name_label: vars_batch_1[ph_name_label]})
-    #
-    #         corr, pval = vcorrcoef(resid, axis='columns')
-    #
-    #         interactions['var1'].append(v1)
-    #         interactions['var2'].append(v2)
-    #         interactions['r'].append(corr.loc[int_key][ph_name_label])
-    #         interactions['pvalue'].append(pval.loc[int_key][ph_name_label])
-    #
-    # interactions = pd.DataFrame(interactions).sort_values('pvalue')
-    #
-    # return interactions
 
 
 def get_ukb_exome_variants_for_genes(genes,
@@ -4749,7 +3444,6 @@ def get_gene_del_variant_stats(gene_names,
                                ukb200k_db = ROOT_PATH + '/ukbiobank/data/exomes/26_OCT_2020/ukb.exome.db',
                                batch_size=100,
                                samples_to_subset=None):
-    # ['varid', 'rsid', 'chrom', 'pos', 'ref', 'alt', 'symbol', 'consequence', 'primateai', 'spliceai', 'af', 'ac', 'an', 'gnomad_af', 'missing', 'homs', 'hets', 'all_samples', 'primateai_v2', 'primateai_v2_percentile']
 
     gene_stats = {GENE_NAME: [], 'n_variants': [], 'n_carriers': []}
 
@@ -5099,7 +3793,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
     if gwas_phenotypes is None:
         gwas_phenotypes = rv_phenotypes
 
-    # CODING_ASSOC_TYPES = [at + suff for at in ['coding', 'splicing'] for suff in ['', '/ambiguous']]
 
     CODING_ASSOC_TYPES = ['coding', 'coding/ambiguous']
     NON_CODING_ASSOC_TYPES = ['non_coding', 'non_coding/ambiguous', 'nearest_gene', 'splicing', 'splicing/ambiguous']
@@ -5217,8 +3910,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
 
             if assoc_types is not None:
                 if assoc_types == 'non_ambiguous':
-                    # gwas_snps = finemapped_snps[
-                    #     finemapped_snps['assoc_type'].isin(['coding', 'non_coding', 'nearest_gene'])].copy()
                     gwas_snps = finemapped_snps[~finemapped_snps['assoc_type'].str.contains('ambiguous')].copy()
 
                 else:
@@ -5368,7 +4059,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
                                                    lambda x: g in fm_split(x))]['assoc_type'])) for g in
                                                               sorted(gwas_genes)]})
 
-            #         display(gene_gwas_hit_type.head())
             if verbose:
                 echo(real_ph_name(gwas_ph_name), ', GWAS genes:', len(gwas_genes), ', GWAS SNPs:', len(gwas_snps))
 
@@ -5385,7 +4075,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
                     else:
                         rv_fname = RV_DIR + f'/{rv_ph_name}/{rv_ph_name}' + rv_fname_suffix
 
-                    # rv_test = pd.read_pickle(rv_fname)
                     rv_test = read_rv_results(rv_fname, recompute_fdr=False)
 
                     if chromosomes is not None:
@@ -5408,7 +4097,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
 
 
                     else:
-                        # rv_metric = f'ALL/{var_type}/carrier/pvalue/fdr_corr'
                         rv_metric = rv_metric_template % var_type
                         rv_test = rv_test.rename(columns={f'ALL/{var_type}/carrier/beta': f'ALL/{var_type}/beta',
                                                           f'ALL/ptv/carrier/beta': f'ALL/ptv/beta'})
@@ -5429,7 +4117,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
 
                     rv_test['sort'] = rv_test[rv_metric]
 
-                    # display(rv_test.head(20))
                     rv_test = rv_test.sort_values('sort', ascending=True)
                     all_ranks = list(range(1, len(rv_test) + 1))
 
@@ -5441,12 +4128,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
                 else:
 
                     rv_test = rv_cache[rv_ph_name].copy()
-
-                #                 if len(genes_to_exclude) > 0:
-                #                     rv_test = rv_test[~rv_test[GENE_NAME].isin(genes_to_exclude)].copy()
-
-                #             filter genes from the rare variants analysis based on pLI
-                #             rv_test = rv_test[rv_test[GENE_NAME].isin(pli_genes)]
 
                 # get the ranks of GWAS genes in the rare variants analysis
                 gwas_genes_rv = rv_test[(rv_test[GENE_NAME].isin(gwas_genes))].sort_values('sort_rank')
@@ -5471,19 +4152,8 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
                         all_sign_rv_genes = np.sum(rv_test[rv_metric] <= rv_pvalue_threshold)
                         best_pval = scipy.stats.binom_test(best_n_genes, n_gwas_genes, p=all_sign_rv_genes / len(rv_test), alternative='greater')
 
-                #                     non_gwas_rv = rv_test[(~rv_test[GENE_NAME].isin(gwas_genes))].sort_values('sort_rank')
-                #                     best_n_genes, best_pval = scipy.stats.ranksums(gwas_genes_rv_ranks, sorted(non_gwas_rv['sort_rank']))
-                #                     best_n_genes = min(len(gwas_genes_rv_ranks), 10)
-                #                     for _ in range(n_gwas_genes):
-                #                         best_n_genes, best_pval = 0, 1
-
-                # best_gwas_genes_df = gwas_genes_rv.iloc[:max(best_n_genes, 15)]
-                #             best_gwas_genes_df = gwas_genes_rv
-
-                # best_gwas_gene_names = set(best_gwas_genes_df[GENE_NAME])
 
                 rv_vs_gwas_pvalues[rv_ph_name].append(best_pval)
-                # rv_vs_gwas_n_top_genes[rv_ph_name].append(best_n_genes / n_gwas_genes if n_gwas_genes > 0 else 0)
 
                 best_n_index_variants = len(set(gene_to_index_variant[g] for g in gwas_genes_rv[GENE_NAME][:best_n_genes]))
 
@@ -5513,7 +4183,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
                              ', gwas_genes=', len(gwas_genes_rv_ranks),
                              ', total_genes=', len(rv_test),
                              ', top_genes:', genes_gwas_info[:min(best_n_genes, TOP_N_GENES_TO_DISPLAY)],
-                             # ', all_ranks:', gwas_genes_rv_ranks
                              )
 
                     r = pd.DataFrame(genes_gwas_info).rename(
@@ -5558,7 +4227,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
 
         rv_vs_gwas_pvalues_df = pd.DataFrame(rv_vs_gwas_pvalues)
 
-        # min_pvalue = np.min(rv_vs_gwas_pvalues_df[rv_phenotypes][rv_vs_gwas_pvalues_df[gwas_phenotypes] > 0].melt())[1]
         min_pvalue = min([p for p in rv_vs_gwas_pvalues_df[rv_phenotypes].to_numpy().flatten() if p > 0])
 
         if verbose:
@@ -5566,11 +4234,7 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
         rv_vs_gwas_pvalues_df = rv_vs_gwas_pvalues_df.replace(0, min_pvalue / 10)
         rv_vs_gwas_pvalues_df = rv_vs_gwas_pvalues_df.sort_values('phenotype').rename(columns={'phenotype': 'GWAS'})
 
-        # col_order = list(rv_vs_gwas_pvalues_df['GWAS'])
         rv_vs_gwas_pvalues_df = rv_vs_gwas_pvalues_df.set_index('GWAS')
-
-        # if len(col_order) == len(rv_vs_gwas_pvalues_df):
-        #     rv_vs_gwas_pvalues_df = rv_vs_gwas_pvalues_df[col_order]
 
         rv_vs_gwas_n_top_genes_df = pd.DataFrame(rv_vs_gwas_n_top_genes)
         rv_vs_gwas_n_top_genes_df = rv_vs_gwas_n_top_genes_df.sort_values('phenotype').rename(columns={'phenotype': 'GWAS'})
@@ -5631,9 +4295,6 @@ def evaluate_rv_vs_gwas(rv_phenotypes,
                                col_linkage=scipy.cluster.hierarchy.linkage(d.T, optimal_ordering=True))
             plt.show()
 
-            # echo('Clustered by both rows and columns')
-            # sns.clustermap(d, cmap='Blues', figsize=FIG_SIZE)  # , row_cluster=False, col_cluster=False)
-            # plt.show()
 
         to_return.append([rv_vs_gwas_pvalues_df, rv_vs_gwas_n_top_genes_df, diag_off_diag_pvalue, diag_sum])
 
@@ -5673,8 +4334,6 @@ def plot_eval_gwas_vs_rv(rv_vs_gwas_pvalues_df,
         if rv_vs_gwas_pvalues_df.loc[r][c] <= pvalue_threshold:
             to_show.add((r, c))
 
-    # echo(len(to_show), to_show)
-
     if cols_to_exclude is not None:
         to_show = set([(r, c) for (r, c) in to_show if c not in cols_to_exclude])
 
@@ -5689,7 +4348,6 @@ def plot_eval_gwas_vs_rv(rv_vs_gwas_pvalues_df,
 
     rv_vs_gwas_pvalues_df = rv_vs_gwas_pvalues_df.loc[rows_to_keep][cols_to_keep].copy()
 
-    # display(rv_vs_gwas_pvalues_df.head())
     diag_sum = np.sum(np.diag(np.log10(rv_vs_gwas_pvalues_df)))
 
     off_diag_sum = np.log10(rv_vs_gwas_pvalues_df).to_numpy().sum() - diag_sum
@@ -5716,7 +4374,6 @@ def plot_eval_gwas_vs_rv(rv_vs_gwas_pvalues_df,
         echo('[ERROR] duplicated columns:', duplicate_columns)
         echo('[ERROR] duplicated rows:', duplicate_rows)
 
-    # display(rv_vs_gwas_pvalues_df.head())
     if out_prefix is not None:
         echo('Saving data in:', out_prefix + '.data.csv.gz and pickle')
         rv_vs_gwas_pvalues_df.to_csv(out_prefix + '.data.csv.gz', sep='\t', index=False)
@@ -5775,7 +4432,6 @@ def plot_eval_gwas_vs_rv(rv_vs_gwas_pvalues_df,
             res = sns.clustermap(d, cmap='Blues', figsize=FIG_SIZE,
                                  row_linkage=scipy.cluster.hierarchy.linkage(d, optimal_ordering=True),
                                  col_linkage=scipy.cluster.hierarchy.linkage(d, optimal_ordering=True))
-            # res.set_xticklabels(res.get_xmajorticklabels(), fontsize=fontsize)
             res.ax_heatmap.set_xticklabels(res.ax_heatmap.get_xmajorticklabels(), fontsize=fontsize, rotation=45, horizontalalignment='right')
             res.ax_heatmap.set_yticklabels(res.ax_heatmap.get_ymajorticklabels(), fontsize=fontsize)
 
@@ -5808,11 +4464,6 @@ def plot_eval_gwas_vs_rv(rv_vs_gwas_pvalues_df,
             plt.savefig(out_prefix + '.clustered_by_column.png', dpi=300)
 
         plt.show()
-
-        # echo('Clustered by both rows and columns')
-        #
-        # sns.clustermap(d, cmap='Blues', figsize=FIG_SIZE)  # , row_cluster=False, col_cluster=False)
-        # plt.show()
 
         return cols_to_keep, rows_to_keep, max_col
 

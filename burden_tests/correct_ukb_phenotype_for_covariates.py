@@ -11,9 +11,9 @@ from jutils import *
 from ukb_analysis import *
 import re
 import pickle
+from constants import *
 
 
-UKB_DATA_PATH = ''
 ALL_QUANTITATIVE_PHENOTYPES = [46, 47, 48, 49, 50, 78, 102, 134, 1160, 3062, 3063, 3064, 3143, 3144, 3146, 3147,
                                3148, 4079, 4080, 4100, 4101, 4103, 4104, 4105, 4106, 4119, 4120, 4122, 4123, 4124, 4125,
                                20015, 20022, 20023, 20127, 21001, 21002, 23099, 23100, 23101, 23102, 23104, 23105,
@@ -78,10 +78,6 @@ def correct_for_medications_effects(phenotypes_table,
                                       ('189-0.0', 'Townsend_deprivation_index_at_recruitment'),
                                       ('24003-0.0', 'Nitrogen_dioxide_air_pollution_2010'),
                                       ('24004-0.0', 'Nitrogen_oxides_air_pollution_2010'),
-                                      #                                       ('24005-0.0', 'Particulate_matter_air_pollution_pm10_2010'),
-                                      #                                       ('24006-0.0', 'Particulate_matter_air_pollution_pm2_5_2010'),
-                                      #                                       ('24007-0.0', 'Particulate_matter_air_pollution_pm2_5_absorbance_2010'),
-                                      #                                       ('24008-0.0', 'Particulate_matter_air_pollution_2_5_10mm_2010'),
                                       ('24010-0.0', 'Inverse_distance_to_the_nearest_road'),
                                       ('24012-0.0', 'Inverse_distance_to_the_nearest_major_road'),
                                       ('24015-0.0', 'Sum_of_road_length_of_major_roads_within_100m'),
@@ -95,8 +91,6 @@ def correct_for_medications_effects(phenotypes_table,
                                       ('24023-0.0', 'Average_16_hour_sound_level_of_noise_pollution'),
                                       ('24024-0.0', 'Average_24_hour_sound_level_of_noise_pollution'),
                                       (74, 'Fasting_time'),
-                                      #                                       (1269, 'Exposure_to_tobacco_smoke_at_home'),
-                                      #                                       (1279, 'Exposure_to_tobacco_smoke_outside_home'),
                                       (1289, 'Cooked_vegetable_intake'),
                                       (1299, 'Salad_or_raw_vegetable_intake'),
                                       (1309, 'Fresh_fruit_intake'),
@@ -150,14 +144,11 @@ def correct_for_medications_effects(phenotypes_table,
                                           ([AGE_label, SEX_label], lambda d: d.iloc[:, 0] * d.iloc[:, 1], 'ageXsex'),
                                           ([AGE_label, SEX_label], lambda d: d.iloc[:, 0] * d.iloc[:, 0] * d.iloc[:, 1],
                                            'age^2Xsex'),
-                                          # ([SEX_label, AGE_label + '-0.0', AGE_label + '-1.0'], lambda d: (d[AGE_label + '-1.0'] - d[AGE_label + '-0.0']) * d[SEX_label], 'timeXsex')
                                           ])
 
         if sex in [FEMALE, BOTH]:
             covariates_to_regress.extend([(2724, CATEGORICAL_PHENOTYPE, 'Had_menopause'),
                                           (2784, CATEGORICAL_PHENOTYPE, 'taken_contraceptive_pill'),
-                                          # (2794, 'Age_started_contraceptive_pill'),
-                                          # (2804, 'Age_last_used_contraceptive_pill'),
                                           (2814, CATEGORICAL_PHENOTYPE, 'used_hormone_replacement_therapy'),
                                           (2834, CATEGORICAL_PHENOTYPE, 'both_ovaries_removed'),
                                           (3140, CATEGORICAL_PHENOTYPE, 'pregnant'),
@@ -273,7 +264,6 @@ def process_phenotype(in_fname,
     echo('[process_phenotype]')
 
     raw_phenotypes = read_table(in_fname, sep=phenotype_sep)
-    # raw_phenotypes = raw_phenotypes[[SAMPLE_ID] + [c for c in raw_phenotypes if c.startswith(str(phenotype_code) + '-')]].copy()
     gc.collect()
 
     # display(raw_phenotypes.head())

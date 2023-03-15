@@ -5,52 +5,6 @@ import statsmodels.api as sm
 import seaborn as sns
 
 
-# def fit_gmm(fgr_af, fgr_effect, bgr_af, bgr_effect):
-#     C = ['bgr', 'gof', 'lof']
-#
-#     a = [0, 1, -1]
-#     b = [0, 0, 0]
-#
-#     priors = [1 / 3, 1 / 3, 1 / 3]
-#     stddevs = estimate_stddevs(bgr_af, bgr_effect)
-#
-#     def posteriors(af, effect, priors, a, b, stddevs):
-#         post = []
-#         for pr, aa, bb in zip(priors, a, b):
-#             post.append(scipy.stats.norm.pdf(effect, loc=(aa * np.log10(af) + bb), scale=stddevs[y]) * pr)
-#
-#         total = sum(post)
-#         return [p / total for p in post]
-#
-#     def compute_log_likelihood(allele_freqs, effects, a, b, priors, stddevs):
-#         ll = 0
-#         for af, eff in zip(allele_freqs, effects):
-#             post = posteriors(af, eff, priors, a, b, stddevs)
-#             for c in range(3):
-#
-#
-#
-#
-#     prev_ll = None
-#     ll = None
-#     LL_DELTA = 1e-5
-#     MAX_ITER = 200
-#
-#     n_iter = 0
-#     while True:
-#         ll = compute_log_likelihood(fgr_af, fgr_effect, a, b, priors, stddevs)
-#
-#         if (prev_ll is not None and ll - prev_ll < LL_DELTA) or n_iter > MAX_ITER:
-#             break
-#
-#         a[1], b[1] = find_optimal(partial_ll, 1, fgr_af, fgr_effect)
-#         a[2], b[2] = find_optimal(partial_ll, 2, fgr_af, fgr_effect)
-#
-#         prev_ll = ll
-#         n_iter += 1
-#
-#     return priors, means
-
 import pandas as pd
 import numpy as np
 import scipy.stats
@@ -146,10 +100,6 @@ def fit_gmm(fgr_af, fgr_effect, bgr_af, bgr_effect, slope=None, bias=None, prior
             bias[2] = b_gof
         else:
             echo('Not updating:', a_gof, b_gof)
-
-        # total_p = np.sum([p for pp in c_posteriors for p in pp])
-        # for c in range(3):
-        #     priors[c] = np.sum(c_posteriors[c]) / total_p
 
         ll = 0
         for a, b, pr, post in zip(slope, bias, priors, c_posteriors):
@@ -572,35 +522,11 @@ def plot_effect_size_vs_AF(all_vars_stats,
         d_to_use = d_to_use.sort_values('pvalue/gwas').drop_duplicates(subset=[VARID_REF_ALT])
         echo(label, len(d_to_use))
 
-        #     res_d = None
-        #     for i in range(len(edges) - 1):
-        #         e1, e2 = edges[i], edges[i + 1]
-        #         _d = d_to_use[(d_to_use[VCF_AF] >= 10 ** e1) & (d_to_use[VCF_AF] < 10 ** e2)]
-        #         _d = _d[[VCF_AF, 'beta', GENE_NAME, 'MAF', 'std']].groupby(GENE_NAME).median().reset_index()
-        #         if res_d is None:
-        #             res_d = _d
-        #         else:
-        #             res_d = pd.concat([res_d, _d], ignore_index=True)
-        #     d_to_use = res_d
-
         d_to_use[beta_label] = transform_beta(d_to_use)
         d_to_use['rv_gwas_ratio'] = -d_to_use['beta'] / np.abs(d_to_use['beta/gwas'])
 
         variants_by_type[label] = d_to_use
 
-        # ac = 1
-        # v = d_to_use[d_to_use[VCF_AC] <= ac]['rv_gwas_ratio']
-        # echo('singleton rv_gwas_ratio:', np.min(v), np.median(v), np.max(v), ', n=', len(v))
-
-        #     wls_weights = [1 / (s ** 2) for s in d_to_use['std']]
-        #     wls_model = sm.WLS(d_to_use[beta_label], pd.DataFrame({'log_MAF': transform_maf(d_to_use['MAF']), 'bias': 1}),
-        #                        weights=wls_weights)
-
-        #     results = wls_model.fit()
-
-        #     display(pd.DataFrame({beta_label: results.params, 'p': results.pvalues}))
-
-        #     plt.plot(x, results.params['log_MAF'] * x + results.params['bias'], color=color)
         n_variants = len(d_to_use)
         cur_data_for_plotting = pd.DataFrame({'log_MAF': transform_maf(d_to_use['MAF']),
                                               'beta': d_to_use[beta_label],
@@ -614,10 +540,6 @@ def plot_effect_size_vs_AF(all_vars_stats,
                                                                         compute_means=compute_means,
                                                                         groupby_gene=False)
 
-        # if all_data_for_plotting is None:
-        #     all_data_for_plotting = cur_data_for_plotting
-        # else:
-        #     all_data_for_plotting = pd.concat([all_data_for_plotting, cur_data_for_plotting], ignore_index=True)
         if fit_curves_on_means:
             betas_to_fit = medians
             mafs_to_fit = edges_to_plot
@@ -632,8 +554,6 @@ def plot_effect_size_vs_AF(all_vars_stats,
 
             c_y = curve_parameters['log_MAF'] * np.log10(2 * (10.0 ** x_values) * (1 - (10.0 ** x_values))) / 2 + curve_parameters['bias']
             y_values = 10.0 ** c_y
-            # y_values = curve_parameters['bias'] * np.power(curve_parameters['log_MAF'] / 2,
-            #                                                2 * (10.0 ** x_values) * (1 - (10.0 ** x_values)))
 
             d_to_plot = pd.DataFrame({'x': x_values,
                                       'y': y_values}).sort_values('x')
@@ -658,7 +578,6 @@ def plot_effect_size_vs_AF(all_vars_stats,
                                    pd.DataFrame({'log_MAF': glm_x,
                                                  'bias': 2}),
                                    family=sm.families.Gaussian(sm.families.links.log())
-                                   #                        family=sm.families.Gaussian(sm.families.links.identity())
                                    )
 
                 results = glm_model.fit(method="lbfgs")
@@ -694,7 +613,6 @@ def plot_effect_size_vs_AF(all_vars_stats,
                 glm_model = sm.GLM(np.array(glm_y), pd.DataFrame({'log_MAF': glm_x,
                                                                   'bias': 1}),
                                    family=sm.families.Gaussian(sm.families.links.log())
-                                   #                        family=sm.families.Gaussian(sm.families.links.identity())
                                    )
 
                 results = glm_model.fit(method="lbfgs")
@@ -751,15 +669,12 @@ def plot_effect_size_vs_AF(all_vars_stats,
                                                                       maf_key='log_MAF',
                                                                       compute_means=compute_means)
 
-            # all_data_for_plotting = pd.concat([all_data_for_plotting, gwas_data_for_plotting], ignore_index=True)
 
             echo('GWAS effects:', list(zip(edges_to_plot, medians)))
             # display(d_to_use.sort_values('MAF').head())
 
             variants_by_type['GWAS'] = gwas_vars
 
-            # to_plot = pd.DataFrame({'e': edges_to_plot, 'm': medians})
-            # to_plot = to_plot[to_plot['m'] != 0]
             plt.scatter(edges_to_plot,
                         medians,
                         s=[S_FACTOR * ball_func(len(values[k])) for k in edges_to_plot],
@@ -768,7 +683,6 @@ def plot_effect_size_vs_AF(all_vars_stats,
                         marker='D',
                         alpha=ball_alpha)
 
-    # plt.plot(to_plot['e'], to_plot['m'], 'o', color='yellow', markersize=6, label='GWAS', markeredgecolor='black')
 
     for label in [LoF_label, DELETERIOUS_MISSENSE_label]:
         for x, y in zip(edges_to_plot, all_medians[label]):
@@ -777,15 +691,9 @@ def plot_effect_size_vs_AF(all_vars_stats,
             echo(x, y, len(all_values[label][x]), len(all_values[SYNONYMOUS_label][x]),
                  len(all_values[BENIGN_MISSENSE_label][x]), p_syn, p_non_del)
 
-            # if p_syn < 0.05:
-            #     plt.text(x+.05, y, '*', color='green', fontsize=16, fontweight='extra bold' if p_syn < 1e-10 else 'ultralight')
-            #
-            # if p_non_del < 0.05:
-            #     plt.text(x+.15, y, '*', color='blue', fontsize=16, fontweight='extra bold' if p_syn < 1e-10 else 'ultralight')
 
     ylim = plt.ylim()
     echo('ylim:', ylim)
-    # sns.set_style("whitegrid", {'axes.grid': False})
 
     plt.xlabel('Allele Frequency')
     plt.ylabel('Per Allele Effect (Z-score)')
@@ -796,22 +704,6 @@ def plot_effect_size_vs_AF(all_vars_stats,
         lgnd.legendHandles[lgnd_idx]._sizes = [70]
 
     sns.despine()
-
-    # ax = fig.axes[0]
-    # plt.draw()
-    #
-    # labels = [int(item.get_text()) for item in ax.get_xticklabels()]
-    # echo(labels)
-    # for i in range(len(labels)):
-    #     l = labels[i]
-    #     if l <= -3:
-    #         labels[i] = '$10^%d$' % l
-    #     elif l == -2:
-    #         labels[i] = '0.01'
-    #     elif l == -1:
-    #         labels[i] = '0.1'
-    # echo(labels)
-    # ax.set_xticklabels(labels)
 
     if out_prefix is not None:
         echo('Saving figures to:', out_prefix)
@@ -985,35 +877,11 @@ def plot_squared_effect_size_vs_AF(all_vars_stats,
         d_to_use = d_to_use.sort_values('pvalue/gwas').drop_duplicates(subset=[VARID_REF_ALT])
         echo(label, len(d_to_use))
 
-        #     res_d = None
-        #     for i in range(len(edges) - 1):
-        #         e1, e2 = edges[i], edges[i + 1]
-        #         _d = d_to_use[(d_to_use[VCF_AF] >= 10 ** e1) & (d_to_use[VCF_AF] < 10 ** e2)]
-        #         _d = _d[[VCF_AF, 'beta', GENE_NAME, 'MAF', 'std']].groupby(GENE_NAME).median().reset_index()
-        #         if res_d is None:
-        #             res_d = _d
-        #         else:
-        #             res_d = pd.concat([res_d, _d], ignore_index=True)
-        #     d_to_use = res_d
-
         d_to_use[beta_label] = transform_beta(d_to_use)
         d_to_use['rv_gwas_ratio'] = -d_to_use['beta'] / np.abs(d_to_use['beta/gwas'])
 
         variants_by_type[label] = d_to_use
 
-        # ac = 1
-        # v = d_to_use[d_to_use[VCF_AC] <= ac]['rv_gwas_ratio']
-        # echo('singleton rv_gwas_ratio:', np.min(v), np.median(v), np.max(v), ', n=', len(v))
-
-        #     wls_weights = [1 / (s ** 2) for s in d_to_use['std']]
-        #     wls_model = sm.WLS(d_to_use[beta_label], pd.DataFrame({'log_MAF': transform_maf(d_to_use['MAF']), 'bias': 1}),
-        #                        weights=wls_weights)
-
-        #     results = wls_model.fit()
-
-        #     display(pd.DataFrame({beta_label: results.params, 'p': results.pvalues}))
-
-        #     plt.plot(x, results.params['log_MAF'] * x + results.params['bias'], color=color)
         n_variants = len(d_to_use)
         cur_data_for_plotting = pd.DataFrame({'log_MAF': transform_maf(d_to_use['MAF']),
                                               'beta': d_to_use[beta_label],
@@ -1026,11 +894,6 @@ def plot_squared_effect_size_vs_AF(all_vars_stats,
                                                                         maf_key='log_MAF',
                                                                         compute_means=compute_means,
                                                                         groupby_gene=False)
-
-        # if all_data_for_plotting is None:
-        #     all_data_for_plotting = cur_data_for_plotting
-        # else:
-        #     all_data_for_plotting = pd.concat([all_data_for_plotting, cur_data_for_plotting], ignore_index=True)
 
         if fit_alkes_curve:
 
@@ -1059,31 +922,6 @@ def plot_squared_effect_size_vs_AF(all_vars_stats,
             else:
                 echo('Using variants with MAF <', min_AF_for_alkes_curve, ':', len(glm_x))
 
-            # echo('Log-linear model')
-            # wls_weights = [1 / (s**3) for s in d_to_use['std']]
-            # # wls_weights = [1 for s in d_to_use['std']]
-            # lm_model = sm.WLS(np.log10(glm_y),
-            #                   pd.DataFrame({'log_MAF': glm_x,
-            #                                 'bias': 2})
-            #                   ,weights=wls_weights)
-            #
-            # results = lm_model.fit()
-            #
-            # display(results.summary())
-            # c_x = np.log10(2 * (10.0**x_values) * (1 - (10.0 ** x_values)))
-            # y_values = np.power(10, results.params['log_MAF'] * c_x + 2 * results.params['bias'])
-            #
-            # # for e in list(x_values):
-            # #     c_maf = 10**e
-            # #     c_x = np.log10(2 * c_maf * (1 - c_maf))
-            # #     y_val = np.power(math.e, results.params['log_MAF'] * c_x + results.params['bias'])
-            # #     y_values.append(y_val)
-            #
-            # d_to_plot = pd.DataFrame({'x': x_values,
-            #                           'y': y_values}).sort_values('x')
-            #
-            # plt.plot(d_to_plot['x'], d_to_plot['y'], color=color, ls='--')
-
             glm_model = sm.GLM(np.array(glm_y),
                                pd.DataFrame({'log_MAF': glm_x,
                                              'bias': 2}),
@@ -1097,16 +935,8 @@ def plot_squared_effect_size_vs_AF(all_vars_stats,
 
             display(pd.DataFrame({beta_label: results.params, 'p': results.pvalues}))
 
-            # y_values = []
-
             c_x = np.log10(2 * (10.0**x_values) * (1 - (10.0 ** x_values)))
             y_values = np.power(math.e, results.params['log_MAF'] * c_x + 2 * results.params['bias'])
-
-            # for e in list(x_values):
-            #     c_maf = 10**e
-            #     c_x = np.log10(2 * c_maf * (1 - c_maf))
-            #     y_val = np.power(math.e, results.params['log_MAF'] * c_x + results.params['bias'])
-            #     y_values.append(y_val)
 
             d_to_plot = pd.DataFrame({'x': x_values,
                                       'y': y_values}).sort_values('x')
@@ -1183,23 +1013,17 @@ def plot_squared_effect_size_vs_AF(all_vars_stats,
                                                                       maf_key='log_MAF',
                                                                       compute_means=compute_means)
 
-            # all_data_for_plotting = pd.concat([all_data_for_plotting, gwas_data_for_plotting], ignore_index=True)
 
             echo('GWAS effects:', list(zip(edges_to_plot, medians)))
-            # display(d_to_use.sort_values('MAF').head())
 
             variants_by_type['GWAS'] = gwas_vars
 
-            # to_plot = pd.DataFrame({'e': edges_to_plot, 'm': medians})
-            # to_plot = to_plot[to_plot['m'] != 0]
             plt.scatter(edges_to_plot,
                         medians,
                         s=[S_FACTOR * math.sqrt(len(values[k])) for k in edges_to_plot],
                         color='black',
                         label='GWAS variants, n= ' + '{:,}'.format(len(gwas_data_for_plotting)),
                         marker='D')
-
-    # plt.plot(to_plot['e'], to_plot['m'], 'o', color='yellow', markersize=6, label='GWAS', markeredgecolor='black')
 
     for label in [LoF_label, DELETERIOUS_MISSENSE_label]:
         for x, y in zip(edges_to_plot, all_medians[label]):
@@ -1208,15 +1032,8 @@ def plot_squared_effect_size_vs_AF(all_vars_stats,
             echo(x, y, len(all_values[label][x]), len(all_values[SYNONYMOUS_label][x]),
                  len(all_values[BENIGN_MISSENSE_label][x]), p_syn, p_non_del)
 
-            # if p_syn < 0.05:
-            #     plt.text(x+.05, y, '*', color='green', fontsize=16, fontweight='extra bold' if p_syn < 1e-10 else 'ultralight')
-            #
-            # if p_non_del < 0.05:
-            #     plt.text(x+.15, y, '*', color='blue', fontsize=16, fontweight='extra bold' if p_syn < 1e-10 else 'ultralight')
-
     ylim = plt.ylim()
     echo('ylim:', ylim)
-    # sns.set_style("whitegrid", {'axes.grid': False})
 
     plt.xlabel('Allele Frequency')
     plt.ylabel('Average Effect Size (std. units)')
@@ -1227,22 +1044,6 @@ def plot_squared_effect_size_vs_AF(all_vars_stats,
         lgnd.legendHandles[lgnd_idx]._sizes = [70]
 
     sns.despine()
-
-    # ax = fig.axes[0]
-    # plt.draw()
-    #
-    # labels = [int(item.get_text()) for item in ax.get_xticklabels()]
-    # echo(labels)
-    # for i in range(len(labels)):
-    #     l = labels[i]
-    #     if l <= -3:
-    #         labels[i] = '$10^%d$' % l
-    #     elif l == -2:
-    #         labels[i] = '0.01'
-    #     elif l == -1:
-    #         labels[i] = '0.1'
-    # echo(labels)
-    # ax.set_xticklabels(labels)
 
     if out_prefix is not None:
         echo('Saving figures to:', out_prefix)

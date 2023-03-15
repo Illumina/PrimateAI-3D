@@ -131,7 +131,6 @@ def reformat_sql_result(gene_vars, decode_sample_id_fields, max_ac, max_af, samp
                                           'varid': VARID_REF_ALT})
 
     gene_vars['MAF'] = np.where(gene_vars[VCF_AF] < 0.5, gene_vars[VCF_AF], 1 - gene_vars[VCF_AF])
-    # gene_vars[VARID_REF_ALT] = gene_vars[VCF_CHROM] + ':' + gene_vars[VCF_POS].astype(str) + ':' + gene_vars[VCF_REF] + ':' + gene_vars[VCF_ALT]
 
     return gene_vars
 
@@ -207,7 +206,6 @@ def filter_variants_for_rv_test(rv_full,
 
             to_flip[VCF_AF] = to_flip[VCF_AC] / to_flip[VCF_AN]
 
-            # echo('Merging:', res[res[VCF_AF] <= 0.5].shape, to_flip.shape)
             res = pd.concat([res[res[VCF_AF] <= 0.5].copy(), to_flip[list(res)]], ignore_index=True).sort_values([VCF_CHROM, VCF_POS])
 
     if gene_names is not None:
@@ -353,7 +351,6 @@ def rv_test_gene_variants(gene_variants, ph_data, ph_name, test_meds=False, test
             predictors = predictors[[p for p in list(predictors) if p not in to_remove]]
 
         if is_binary:
-            # regression_model = sm.Logit(ph_data[ph_name], predictors)
             regression_model = None
         else:
             regression_model = sm.OLS(ph_data[ph_name], predictors)
@@ -391,8 +388,6 @@ def rv_test_gene_variants(gene_variants, ph_data, ph_name, test_meds=False, test
                 cur_results[k + '/' + 'pvalue'] = 1
                 cur_results[k + '/' + 'beta'] = 0
 
-        # cur_results[sort_by_pvalue_label + '/sort_by_pvalue'] = regression_result.pvalues[sort_by_pvalue_label]
-
     else:
 
         rsquared_adj = 0
@@ -400,8 +395,6 @@ def rv_test_gene_variants(gene_variants, ph_data, ph_name, test_meds=False, test
         for k in res_labels:
             cur_results[k + '/' + 'beta'] = 0
             cur_results[k + '/' + 'pvalue'] = 1
-
-        # cur_results[sort_by_pvalue_label + '/sort_by_pvalue'] = 1
 
     cur_results['n_carriers/total'] = np.sum(ph_data['carrier'])
     cur_results['rsquared_adj'] = rsquared_adj
@@ -455,8 +448,6 @@ def rv_test_gene(x,
                  pathogenicity_score_label=None):
 
 
-    # echo(rv_test_gene.cnt, 'genes tested.')
-
     gene_name = x.iloc[0][GENE_NAME]
 
     if rv_test_gene.cnt % 10 == 0:
@@ -471,9 +462,6 @@ def rv_test_gene(x,
         ac_thresholds = [np.max(x[VCF_AC].unique())]
 
     echo_debug(gene_name, 'Getting pAI thresholds')
-
-    # echo('pAI_thresholds:', len(pAI_thresholds), pAI_thresholds)
-    # echo(gene_name, len(ac_thresholds), len(pAI_thresholds), len(ac_thresholds) * len(pAI_thresholds))
 
     results_array = []
     echo_debug(gene_name, 'iterating over AC thresholds')
@@ -520,7 +508,6 @@ def rv_test_gene(x,
     if multiple_testing_correction == 'fdr':
 
         pvalue_keys = sorted(set(k for r in results_array for k in r if k.endswith('pvalue')))
-        # echo(pvalue_keys)
         for pvalue_key in pvalue_keys:
 
             pvalues = [r[pvalue_key] for r in results_array]
@@ -531,9 +518,6 @@ def rv_test_gene(x,
             for r, p in zip(results_array, pvalues):
                 r[pvalue_key + '/fdr_corr'] = p
 
-    # echo(results_array[0])
-
-    # results = min(results_array, key=lambda r: r[sort_by_pvalue_label + '/sort_by_pvalue/fdr_corr'])
     def get_best_result(results_array, sort_by_pvalue_label, key_prefix, find_best_pAI_threshold):
         sorted_results_array = sorted(results_array,
                                       key=lambda r: (r[sort_by_pvalue_label + '/pvalue/fdr_corr'],
@@ -599,9 +583,6 @@ def compute_results(batch_params):
         traceback.print_exc()
 
         raise e
-
-        # print('%d: %s' % (os.getpid(), traceback.format_exc()))
-        # exit(1)
 
 
 
@@ -727,7 +708,6 @@ def rv_test(ph_data,
     results = None
 
     if test_meds:
-        # raise NotImplemented('testing medications is not implemented')
 
         key_prefix = '/' + var_label
 
@@ -737,7 +717,6 @@ def rv_test(ph_data,
 
         sort_by_pvalue_label = None
         results = {}
-        # echo('med_name:', med_name, ', med_label:', med_label)
     else:
 
         key_prefix = 'ALL/' + var_label
@@ -758,15 +737,12 @@ def rv_test(ph_data,
 
     ph_data = ph_data[cols_to_copy].copy()
 
-    # normalize phenotype to mean 0 and variance 1
-    # ph_data[ph_name] = scipy.stats.zscore(ph_data[ph_name])
 
     echo('n_genes:', len(filtered_rv.drop_duplicates(GENE_NAME)))
 
     rv_test_gene.cnt = 0
 
     if test_meds:
-        # raise NotImplemented('testing medications is not implemented')
 
         for gene_name, gene_variants in filtered_rv.groupby(GENE_NAME):
 
@@ -821,8 +797,6 @@ def rv_test(ph_data,
                                                                   MAX_pAI_THRESHOLDS_TO_TEST=MAX_pAI_THRESHOLDS_TO_TEST,
                                                                   phenotype_name_original=phenotype_name_original,
                                                                   pathogenicity_score_label=pathogenicity_score_label)
-
-            # carrier_columns = [c for c in list(carrier_table) if c not in [SAMPLE_ID, ph_name, phenotype_name_original]]
 
             if is_binary:
                 echo('Computing chi^2 tests for', len(carrier_columns), 'columns')
@@ -887,10 +861,6 @@ def rv_test(ph_data,
                 pval = pd.DataFrame(pval, columns=[ph_name], index=carrier_columns)
 
 
-                # corr, pval = vcorrcoef(carrier_table[[ph_name]],
-                #                        carrier_table[carrier_columns],
-                #                        axis='columns')
-
             cast_type = {'str': str,
                          'int': int,
                          'float': float}
@@ -910,7 +880,6 @@ def rv_test(ph_data,
                 best_pvalue_row = gene_rows.iloc[0]
 
                 row_info = best_pvalue_row['index'].split(';')
-                # echo(row_info)
 
                 results[GENE_NAME].append(gene)
 
@@ -1009,7 +978,6 @@ def rv_test_parallel(ph_data,
     filtered_rv[pathogenicity_score_label] = filtered_rv[pathogenicity_score_label].fillna(1)
 
     if test_meds:
-        # raise NotImplemented('testing medications is not implemented')
 
         key_prefix = '/' + var_label
 
@@ -1018,7 +986,6 @@ def rv_test_parallel(ph_data,
         cols_to_copy = [SAMPLE_ID, ph_name] + all_med_columns
 
         sort_by_pvalue_label = None
-        # echo('med_name:', med_name, ', med_label:', med_label)
     else:
 
         key_prefix = 'ALL/' + var_label
@@ -1037,9 +1004,6 @@ def rv_test_parallel(ph_data,
 
     if test_PRS is not None:
         raise NotImplemented('Testing PRS interactions is not implemented')
-
-        # cols_to_copy.append(test_PRS)
-        # sort_by_pvalue_label = 'carrier_X_PRS'
 
     ph_data = ph_data[cols_to_copy].copy()
     ph_data_fname = dump_to_tmp_file(ph_data, output_dir=output_dir)
@@ -1174,9 +1138,6 @@ def _process_rv_test_batch(batch_params):
 
         raise e
 
-        # print('%d: %s' % (os.getpid(), traceback.format_exc()))
-        # exit(1)
-
 
 def _process_rv_test_batch_randomized(batch_params):
     try:
@@ -1196,12 +1157,7 @@ def _process_rv_test_batch_randomized(batch_params):
 
         traceback.print_exc()
 
-        # print
-
         raise e
-
-        # print('%d: %s' % (os.getpid(), traceback.format_exc()))
-        # exit(1)
 
 
 def process_rv_test_batch(batch_params):
@@ -1232,8 +1188,6 @@ def process_rv_test_batch(batch_params):
 
     sort_by_label = key_prefix + '/%s/pvalue/fdr_corr' % sort_by_pvalue_label
     echo('sort_by_pvalue_label:', sort_by_pvalue_label)
-    # normalize phenotype to mean 0 and variance 1
-    # ph_data[ph_name] = scipy.stats.zscore(ph_data[ph_name])
     echo('n_genes:', len(filtered_rv.drop_duplicates(GENE_NAME)))
     rv_test_gene.cnt = 0
     if test_meds:
@@ -1294,7 +1248,6 @@ def process_rv_test_batch(batch_params):
                                                                   phenotype_name_original=phenotype_name_original,
                                                                   pathogenicity_score_label=pathogenicity_score_label)
 
-            # carrier_columns = [c for c in list(carrier_table) if c not in [SAMPLE_ID, ph_name, phenotype_name_original]]
 
             if is_binary:
                 echo('Computing chi^2 tests for', len(carrier_columns), 'columns')
@@ -1360,10 +1313,6 @@ def process_rv_test_batch(batch_params):
 
                 pval = pd.DataFrame(pval, columns=[ph_name], index=carrier_columns)
 
-                # corr, pval = vcorrcoef(carrier_table[[ph_name]],
-                #                        carrier_table[carrier_columns],
-                #                        axis='columns')
-
             cast_type = {'str': str,
                          'int': int,
                          'float': float}
@@ -1383,7 +1332,6 @@ def process_rv_test_batch(batch_params):
                 best_pvalue_row = gene_rows.iloc[0]
 
                 row_info = best_pvalue_row['index'].split(';')
-                # echo(row_info)
 
                 results[GENE_NAME].append(gene)
 
@@ -1476,17 +1424,9 @@ def process_rv_test_batch_randomized(batch_params):
     for sid_idx, sid in enumerate(list(ph_data[SAMPLE_ID])):
         sid_to_phenotypes[sid] = ph_values[sid_idx, :]
 
-    # echo('ph_data.head(10)')
-    # echo(ph_data.head(10))
-    #
-    # echo('ph_data.tail(10)')
-    # echo(ph_data.tail(10))
-
     sort_by_label = key_prefix + '/%s/pvalue/fdr_corr' % sort_by_pvalue_label
     echo('sort_by_pvalue_label:', sort_by_pvalue_label)
 
-    # normalize phenotype to mean 0 and variance 1
-    # ph_data[ph_name] = scipy.stats.zscore(ph_data[ph_name])
     echo('n_genes:', len(filtered_rv.drop_duplicates(GENE_NAME)))
     rv_test_gene.cnt = 0
     if test_meds:
@@ -1519,10 +1459,6 @@ def process_rv_test_batch_randomized(batch_params):
                    key_prefix + '/carrier/pvalue': [],
                    key_prefix + '/carrier/pvalue/fdr_corr': [],
                    key_prefix + '/sort_by': []}
-
-        # if is_binary:
-        #     for k in ['carrier/odds_ratio', 'carrier/n_cases', 'carrier/n_controls', 'all/n_cases', 'all/n_controls']:
-        #         results[key_prefix + '/' + k] = []
 
         if find_best_pAI_threshold:
             results[key_prefix + '/best_pAI_threshold'] = []
@@ -1648,7 +1584,6 @@ def rv_test_for_batch(genes_variants,
 
     carrier_col_2_idx = dict((k, i) for i, k in enumerate(carrier_columns))
 
-    # carrier_columns = [c for c in list(carrier_table) if c not in [SAMPLE_ID, ph_name, phenotype_name_original]]
     if is_binary:
         echo('Computing chi^2 tests for', len(carrier_columns), 'columns')
 
@@ -1714,9 +1649,6 @@ def rv_test_for_batch(genes_variants,
         pval = pd.DataFrame(pval, columns=ph_name_columns, index=carrier_columns)
         corr = pd.DataFrame(corr, columns=ph_name_columns, index=carrier_columns)
 
-        # corr, pval = vcorrcoef(carrier_table[[ph_name]],
-        #                        carrier_table[carrier_columns],
-        #                        axis='columns')
     cast_type = {'str': str,
                  'int': int,
                  'float': float}
@@ -1753,7 +1685,6 @@ def rv_test_for_batch(genes_variants,
             best_pvalue_row = gene_rows.iloc[0]
 
             row_info = best_pvalue_row['index'].split(';')
-            # echo(row_info)
 
             for kv in row_info:
 
@@ -1800,7 +1731,6 @@ def key_value_to_string(k, v):
     return k + '=' + {str: 'str',
                       int: 'int',
                       float: 'float'}[type(v)] + '|' + str(v)
-
 
 def create_carrier_table(filtered_rv,
                          ph_data,
@@ -1893,11 +1823,6 @@ def create_carrier_table(filtered_rv,
 
         gene_name_key = key_value_to_string(GENE_NAME, gene)
 
-        # n_tests = len(ac_thresholds) * len(pAI_thresholds)
-        # n_tests_key = key_value_to_string('n_tests', n_tests)
-        #
-        # echo(gene, ', n_tests_key:', n_tests_key)
-
         splitted = gene_variants[ALL_SAMPLES].str.split(',')
 
         var_to_carriers = {k: set(v) & all_samples for k, v in zip(gene_variants[VARID_REF_ALT], splitted)}
@@ -1955,7 +1880,6 @@ def create_carrier_table(filtered_rv,
                     col_name_array += [key_value_to_string('beta', float(beta)),
                                        key_value_to_string('beta_in_original_units', float(beta_in_original_units))]
 
-                # beta = 0
                 col_name = ';'.join(col_name_array)
                 gene_carrier_cols.append(col_name)
                 i += 1
@@ -1966,9 +1890,6 @@ def create_carrier_table(filtered_rv,
         for gene_col_idx in range(len(gene_carrier_cols)):
             carrier_cols.append(gene_carrier_cols[gene_col_idx] + ';' + key_value_to_string('n_tests', n_tests))
 
-    # echo(f'shapes: carrier_table - {carrier_table.shape}, carrier_cols - {len(carrier_cols)}, index - {i}')
-    # sometimes varids are the same between different threshold combinations,
-    # these duplicates are skipped, so the table size is a bit smaller
     if i < carrier_table.shape[0]:
         carrier_table = carrier_table[:i, ]
 
@@ -2081,8 +2002,6 @@ def test_ukb_quantitive_phenotype_for_rare_variants_associations(variants_full,
     for vtype, vlabel in variant_types_to_test:
 
         echo('Testing:', vlabel)
-
-        # remove_missing_pAI = (vlabel in ['del', MISSENSE_LABEL + '_pAI_optimized'])
 
         filtered_rv = filter_variants_for_rv_test(variants_full,
                                                   consequence=vtype,
@@ -2423,7 +2342,6 @@ def precompute_variant_stats_for_rv_test(gene_name,
     # and keep only combos with more than one carrier
 
     d = dict((tuple(sorted(v['variants'])), v) for v in variants_info if v['n_carriers'] > 1)
-    # echo('variants_info:', len(variants_info), len(d))
     variants_info = [d[k] for k in d]
 
     n_tests = len(variants_info)
@@ -2607,7 +2525,6 @@ def rv_test_for_batch_binary(genes_variants,
 
         append_value(results, GENE_NAME, gene_name)
         append_value(results, key_prefix + '/sort_by', key_prefix + '/%s/pvalue/fdr_corr' % sort_by_pvalue_label)
-        # append_value(results, key_prefix + '/n_carriers', best_combo['n_carriers'])
 
         best_combo_variants = cur_gene_variants[(cur_gene_variants[VCF_AC] <= best_AC) & (cur_gene_variants[pathogenicity_score_label] >= best_pAI_score)]
 
@@ -2838,7 +2755,6 @@ def rv_test_for_batch_v4(genes_variants,
                 sid_to_phenotypes[sid] = np.array(
                     [ph_values_array[c_rand_idx] for c_rand_idx in rand_idx[sid_no]])
 
-            # echo('[precompute_variant_stats_for_rv_test]')
             echo('Randomizing done')
             gene_iteration_idx += 1
             variants_info_for_rv = precompute_variant_stats_for_rv_test(gene_name,
@@ -2863,7 +2779,6 @@ def rv_test_for_batch_v4(genes_variants,
 
             gene_results = []
 
-            # echo('performing tests')
             for cur_var_info in variants_info_for_rv:
                 cur_var_info['n_tests'] = len(variants_info_for_rv)
 
@@ -2888,7 +2803,6 @@ def rv_test_for_batch_v4(genes_variants,
                     carrier_totals_of_squares = cur_var_info['totals_of_squares']
                     carrier_means = carrier_totals / n_carriers
 
-                    # carrier_var = (n_carriers * carrier_totals_of_squares - np.square(carrier_totals)) / (n_carriers ** 2)
                     carrier_var = carrier_totals_of_squares / (n_carriers - 1) - np.square(carrier_totals) / (n_carriers * (n_carriers - 1))
 
                     non_carrier_totals = ph_total - carrier_totals
@@ -2896,7 +2810,6 @@ def rv_test_for_batch_v4(genes_variants,
                     non_carrier_means = non_carrier_totals / n_non_carriers
                     non_carrier_total_of_squares = ph_total_of_squares - carrier_totals_of_squares
 
-                    # non_carrier_var = (n_non_carriers * non_carrier_total_of_squares - np.square(non_carrier_totals)) / (n_non_carriers ** 2)
                     non_carrier_var = non_carrier_total_of_squares / (n_non_carriers - 1) - np.square(non_carrier_totals) / (n_non_carriers * (n_non_carriers - 1))
 
                     df = len(all_samples_set) - 2
@@ -2909,9 +2822,6 @@ def rv_test_for_batch_v4(genes_variants,
 
                     p_values = 2 * scipy.stats.t.sf(np.abs(t_stat), df)
 
-                    # if np.any(np.isnan(p_values)):
-                    #     echo(f'[WARNING] {gene_name}: NaN p-values from the T-test, replacing NaNs with 1:', np.sum(np.isnan(p_values)), np.argwhere(np.isnan(p_values)))
-                    #     p_values = np.nan_to_num(p_values, nan=1)
 
                     betas = carrier_means - non_carrier_means
                     stats = t_stat
@@ -2933,7 +2843,6 @@ def rv_test_for_batch_v4(genes_variants,
             best_real_bh_fdr = None
             best_real_stat = None
 
-            # echo('Finding best combo for each permutation')
             for ph_idx in range(randomization_batch_size + 1):
                 best_combo_idx = best_combo_indexes[ph_idx]
                 best_combo = variants_info_for_rv[best_combo_idx]
@@ -3076,7 +2985,6 @@ def rv_test_for_batch_v4(genes_variants,
                         random_stats = []
 
                 if not keep_testing:
-                    # echo('Done')
                     if c_fdr == 0:
                         echo(gene_name, key_prefix, 'c_fdr was estimated to be 0, reverting to BH FDR:', best_real_bh_fdr)
                         c_fdr = best_real_bh_fdr
@@ -3084,8 +2992,6 @@ def rv_test_for_batch_v4(genes_variants,
                     append_value(results, key_prefix + '/carrier/pvalue/fdr_corr', c_fdr)
                     append_value(results, key_prefix + '/carrier/pvalue/n_randomizations', n_randomizations)
                     append_value(results, key_prefix + '/needs_randomization', 0)
-
-#####
 
 
 def rv_test_for_batch_binary_v4(genes_variants,
@@ -3253,7 +3159,6 @@ def rv_test_for_batch_binary_v4(genes_variants,
                                        cur_var_info['info']['n_variants'] >= min_variants_per_gene]
             gene_results = []
 
-            # echo('performing tests')
             for cur_var_info in variants_info_for_rv:
 
                 cur_var_info['n_tests'] = len(variants_info_for_rv)
@@ -3299,7 +3204,6 @@ def rv_test_for_batch_binary_v4(genes_variants,
             COLUMNS_FOR_RANDOMIZED_DATA = ['carrier/beta', 'carrier/stat', 'carrier/pvalue', 'carrier/pvalue/fdr_corr', 'best_pAI_threshold', 'best_AC', 'n_variants', 'n_carriers']
             random_cols = dict((c, []) for c in COLUMNS_FOR_RANDOMIZED_DATA)
 
-            # echo('Finding best combo for each permutation')
             for ph_idx in range(randomization_batch_size + 1):
                 best_combo_idx = best_combo_indexes[ph_idx]
                 best_combo = variants_info_for_rv[best_combo_idx]
@@ -3700,8 +3604,6 @@ def get_logit_BH_fdr(ph_data, ph_name, combos, best_combo_idx, debug=False):
     return fdr_corrected_pvalues[best_combo_idx]
 
 
-
-
 def precompute_variant_stats_for_chi2_test(gene_name,
                                            gene_variants,
                                            sid_to_phenotypes,
@@ -3846,7 +3748,6 @@ def precompute_variant_stats_for_chi2_test(gene_name,
 
     # make variant_info unique based on the set of variants
     d = dict((tuple(sorted(v['variants'])), v) for v in variants_info)
-    # echo('variants_info:', len(variants_info), len(d))
     variants_info = [d[k] for k in d]
 
     n_tests = len(variants_info)

@@ -65,7 +65,6 @@ def eval_scores_against_replicates(gene_phenotype_pairs,
     res = {'phenotype': [],
            GENE_NAME: [],
            'score': [],
-           # 'enr': [],
            'score|pvalue': [],
            'score|r': [],
            'score|r2': [],
@@ -140,8 +139,6 @@ def eval_scores_against_replicates(gene_phenotype_pairs,
 
                     gene_variants.append(vv)
 
-            #             echo(ph_name, gene_name, len(all_vars), n_vars)
-
             if len(all_vars) < min_n_variants_per_gene:
                 echo('Too few variants:', ph_name, gene_name, len(all_vars), 'out of', len(g_vars), n_vars)
                 continue
@@ -156,21 +153,12 @@ def eval_scores_against_replicates(gene_phenotype_pairs,
 
                 r_repl, p_repl = corr_func(training_set_values, test_set_values)
 
-                # if invert_sign_based_on_lof:
-                #     r_repl *= corr_sign
-
-                # if r_repl == 0:
-                #     echo('correlation of 0 between replicates, skipping permutation!', gene_name, ph_name)
-                #     continue
-
                 agr_stats['score'].append(REPLICATES)
                 agr_stats['r2'].append(r_repl ** 2)
 
                 for score_label in score_labels + [REPLICATES]:
                     if score_label in scores_to_skip:
                         continue
-
-                    #             echo(score_label, 'scores:', len(scores))
 
                     if score_label == REPLICATES:
                         scores = training_set_values
@@ -190,7 +178,6 @@ def eval_scores_against_replicates(gene_phenotype_pairs,
                         r *= corr_sign
 
                     if np.isnan(r):
-                        #                         echo('[WARNING] corr_func returned NaNs for', gene_name, score_label)
                         r = 0
                         p = 1
 
@@ -198,7 +185,6 @@ def eval_scores_against_replicates(gene_phenotype_pairs,
                     res['score|r'].append(r)
                     res['score|r2'].append(r ** 2)
 
-                    # res['enr'].append(np.square(r / r_repl))
                     res['n_variants'].append(len(scores))
 
                     for k in gpp.keys():
@@ -215,8 +201,6 @@ def eval_scores_against_replicates(gene_phenotype_pairs,
     if include_synonymous_variants:
         res = pd.concat([res, res_syn], ignore_index=True)
 
-    # agr_stats = pd.DataFrame(agr_stats)
-    # echo(gene_variants)
     gene_variants = pd.DataFrame(gene_variants)
     if gene_variants_syn is not None:
         gene_variants = pd.concat([gene_variants, gene_variants_syn], ignore_index=True, sort=True)
@@ -296,7 +280,6 @@ def eval_ethnicities_against_replicates(gene_phenotype_pairs,
            'repl|r2': [],
 
            'n_variants': [],
-           # 'ethnicity': []
            }
 
     for ph_name in sorted(gene_phenotype_pairs['phenotype'].unique()):
@@ -362,8 +345,6 @@ def eval_ethnicities_against_replicates(gene_phenotype_pairs,
 
                         gene_variants.append(vv)
 
-                #             echo(ph_name, gene_name, len(all_vars), n_vars)
-
                 if len(all_vars) < min_n_variants_per_gene:
                     echo('Too few variants:', ph_name, gene_name, len(all_vars), 'out of', len(g_vars), n_vars)
                     continue
@@ -377,13 +358,6 @@ def eval_ethnicities_against_replicates(gene_phenotype_pairs,
                     training_set_values = [np.mean([sid_to_ph[s] for s in sids]) for sids in training_set]
 
                     r_repl, p_repl = corr_func(training_set_values, test_set_values)
-
-                    # if invert_sign_based_on_lof:
-                    #     r_repl *= corr_sign
-
-                    # if r_repl == 0:
-                    #     echo('correlation of 0 between replicates, skipping permutation!', gene_name, ph_name)
-                    #     continue
 
                     agr_stats['score'].append(REPLICATES)
                     agr_stats['r2'].append(r_repl ** 2)
@@ -412,7 +386,6 @@ def eval_ethnicities_against_replicates(gene_phenotype_pairs,
                             r *= corr_sign
 
                         if np.isnan(r):
-                            #                         echo('[WARNING] corr_func returned NaNs for', gene_name, score_label)
                             r = 0
                             p = 1
 
@@ -420,7 +393,6 @@ def eval_ethnicities_against_replicates(gene_phenotype_pairs,
                         res['score|r'].append(r)
                         res['score|r2'].append(r ** 2)
 
-                        # res['enr'].append(np.square(r / r_repl))
                         res['n_variants'].append(len(scores))
 
                         for k in gpp.keys():
@@ -437,8 +409,6 @@ def eval_ethnicities_against_replicates(gene_phenotype_pairs,
     if include_synonymous_variants:
         res = pd.concat([res, res_syn], ignore_index=True)
 
-    # agr_stats = pd.DataFrame(agr_stats)
-    # echo(gene_variants)
     gene_variants = pd.DataFrame(gene_variants)
     if gene_variants_syn is not None:
         gene_variants = pd.concat([gene_variants, gene_variants_syn], ignore_index=True, sort=True)
@@ -485,16 +455,11 @@ def eval_scores_on_all_variants(gene_phenotype_pairs,
 
         ph_label = ph_name + '.all_ethnicities.both.dynamic_med_corrected.IRNT'
 
-        #     d = ukb_phenotypes[[SAMPLE_ID, ph_label]].dropna()
-        #     sid_to_ph = dict((sid, ph) for sid, ph in zip(d[SAMPLE_ID], d[ph_label]))
-
         d = pd.read_pickle(rv_dir + f'/{ph_name}/{ph_name}' + rv_suffix)
         sid_to_ph = dict((sid, ph) for sid, ph in zip(d[SAMPLE_ID], d[ph_label]))
 
         for _, gpp in ph_genes.iterrows():
             gene_name = gpp[GENE_NAME]
-
-            # score_label = PRIMATEAI_SCORE
 
             var_type = [VCF_MISSENSE_VARIANT]
 
@@ -559,7 +524,6 @@ def eval_scores_on_all_variants(gene_phenotype_pairs,
             carrier_level_values = [sid_to_ph[sid] for sid in all_carriers]
             variant_level_values = [np.mean([sid_to_ph[sid] for sid in all_s]) for all_s in all_variant_carriers]
 
-            #             echo(len(variant_level_values), variant_level_values)
             for score_label in score_labels:
                 if score_label in scores_to_skip:
                     continue
@@ -569,7 +533,6 @@ def eval_scores_on_all_variants(gene_phenotype_pairs,
                 res['score'].append(score_label)
 
                 variant_level_scores = [v[score_label] for v in all_vars]
-                #                 echo(len(variant_level_scores), variant_level_scores)
                 carrier_level_scores = [c2v[sid][score_label] for sid in all_carriers]
 
                 r, p = corr_func(variant_level_scores, variant_level_values)
@@ -653,9 +616,6 @@ def eval_ethnicities_on_all_variants(gene_phenotype_pairs,
 
         ph_label = ph_name + '.all_ethnicities.both.dynamic_med_corrected.IRNT'
 
-        #     d = ukb_phenotypes[[SAMPLE_ID, ph_label]].dropna()
-        #     sid_to_ph = dict((sid, ph) for sid, ph in zip(d[SAMPLE_ID], d[ph_label]))
-
         d = pd.read_pickle(rv_dir + f'/{ph_name}/{ph_name}' + rv_suffix)
         sid_to_ph = dict((sid, ph) for sid, ph in zip(d[SAMPLE_ID], d[ph_label]))
 
@@ -722,8 +682,6 @@ def eval_ethnicities_on_all_variants(gene_phenotype_pairs,
 
                     vv[VCF_AC + '/' + ethn] = len(ph_vals)
                     vv[ALL_SAMPLES] = ','.join(all_s)
-                    # if vv[VARID_REF_ALT] in [_v[VARID_REF_ALT] for _v in gene_variants]:
-                    #     echo('Variant seen:', vv)
                     gene_variants.append(vv)
 
                 if len(all_variant_carriers) < min_vars_per_gene:
@@ -737,7 +695,6 @@ def eval_ethnicities_on_all_variants(gene_phenotype_pairs,
                 carrier_level_values = [sid_to_ph[sid] for sid in all_carriers]
                 variant_level_values = [np.mean([sid_to_ph[sid] for sid in all_s]) for all_s in all_variant_carriers]
 
-                #             echo(len(variant_level_values), variant_level_values)
                 for score_label in score_labels:
                     if score_label in scores_to_skip:
                         continue
@@ -747,7 +704,6 @@ def eval_ethnicities_on_all_variants(gene_phenotype_pairs,
                     res['score'].append(score_label + '/' + ethn)
 
                     variant_level_scores = [v[score_label] for v in all_vars]
-                    #                 echo(len(variant_level_scores), variant_level_scores)
                     carrier_level_scores = [c2v[sid][score_label] for sid in all_carriers]
 
                     r, p = corr_func(variant_level_scores, variant_level_values)
@@ -793,8 +749,6 @@ def eval_ethnicities_on_all_variants(gene_phenotype_pairs,
 def compare_every_pair_of_scores(gene_list_for_primateAI_evaluation, metric_label='variant_level/r2',
                                  compare_func=scipy.stats.ranksums):
     x = gene_list_for_primateAI_evaluation.sort_values(GENE_NAME)
-
-    #     echo(x.shape, len(set(x[GENE_NAME])))
 
     rs_s = {'score': []}
     rs_p = {'score': []}

@@ -27,147 +27,6 @@ def add_element(d, key, el):
         d[key] = []
     d[key].append(el)
 
-#
-# def test_each_variant_for_association(all_variants_in_phenotype_samples,
-#                                       ph_data_for_testing,
-#                                       phenotype_name=None,
-#                                       n_shuffles=0,
-#                                       cache=None
-#                                       ):
-#
-#     echo('Testing variants for association:', len(all_variants_in_phenotype_samples), '!')
-#
-#     ph_data_for_testing = ph_data_for_testing.sort_values(SAMPLE_ID)
-#     ph_std = np.std(ph_data_for_testing[phenotype_name])
-#
-#     echo('Generating shuffled phenotype values')
-#     permuted_ph_values = np.tile(ph_data_for_testing[phenotype_name],
-#                                  (n_shuffles + 1, 1))
-#
-#     for i in range(1, n_shuffles + 1):
-#         np.random.shuffle(permuted_ph_values[i])
-#
-#     permuted_ph_values = permuted_ph_values.T
-#
-#     ph_values_and_randos = pd.DataFrame(permuted_ph_values)
-#     ph_values = ph_values_and_randos[[0]]
-#
-#     all_samples = list(ph_data_for_testing[SAMPLE_ID])
-#     all_samples_set = set(all_samples)
-#     s2i = dict((s, i) for i, s in enumerate(all_samples))
-#
-#     gt_array = np.zeros((len(ph_data_for_testing), 1))
-#
-#     res = {}
-#     n_cache_hits = 0
-#
-#     echo('Computing hom/het/miss stats')
-#
-#     all_variants_in_phenotype_samples[HOMOZYGOTES] = all_variants_in_phenotype_samples[HOMOZYGOTES].apply(lambda s: set(s.split(',')) & all_samples_set)
-#     all_variants_in_phenotype_samples[HETEROZYGOTES] = all_variants_in_phenotype_samples[HETEROZYGOTES].apply(lambda s: set(s.split(',')) & all_samples_set)
-#     all_variants_in_phenotype_samples[MISSING] = all_variants_in_phenotype_samples[MISSING].apply(lambda s: set(s.split(',')) & all_samples_set)
-#
-#     all_variants_in_phenotype_samples['n_homs'] = all_variants_in_phenotype_samples[HOMOZYGOTES].apply(len)
-#     all_variants_in_phenotype_samples['n_hets'] = all_variants_in_phenotype_samples[HETEROZYGOTES].apply(len)
-#     all_variants_in_phenotype_samples['n_miss'] = all_variants_in_phenotype_samples[MISSING].apply(len)
-#
-#     all_variants_in_phenotype_samples['key'] = zip(all_variants_in_phenotype_samples['n_hets'],
-#                                                    all_variants_in_phenotype_samples['n_homs'])
-#
-#     all_variants_in_phenotype_samples[VCF_AC] = 2 * all_variants_in_phenotype_samples['n_homs'] + all_variants_in_phenotype_samples['n_hets']
-#     all_variants_in_phenotype_samples[VCF_AN] = len(all_samples_set) - 2 * all_variants_in_phenotype_samples['n_miss']
-#
-#     all_variants_in_phenotype_samples = all_variants_in_phenotype_samples[all_variants_in_phenotype_samples[VCF_AC] > 0].copy()
-#     all_variants_in_phenotype_samples[VCF_AF] = all_variants_in_phenotype_samples[VCF_AC] / all_variants_in_phenotype_samples[VCF_AN]
-#
-#     echo('Processing variants:', len(all_variants_in_phenotype_samples))
-#
-#     batch_size = 1000
-#     for batch_idx, var_batch in enumerate(batchify(all_variants_in_phenotype_samples, batch_size=batch_size)):
-#
-#         cache_keys = set(cache.keys())
-#         cached_vars = var_batch[var_batch['key'].isin(cache_keys)]
-#         non_cached_vars = var_batch[~var_batch['key'].isin(cache_keys)]
-#
-#         echo('batch:', batch_idx, ', cached_vars:', cached_vars.shape, ', non_cached_vars:', non_cached_vars.shape)
-#
-#         for vs, is_cached in [(cached_vars, True), (non_cached_vars, False)]:
-#
-#             for v_idx, (_, v) in enumerate(vs.iterrows()):
-#
-#                 heterozygotes = v[HETEROZYGOTES]
-#                 homozygotes = v[HOMOZYGOTES]
-#
-#                 n_hets = len(heterozygotes)
-#                 n_homs = len(homozygotes)
-#
-#                 if n_hets == 0 and n_homs == 0:
-#                     continue
-#
-#                 v_key = (n_hets, n_homs)
-#
-#                 for i in range(len(gt_array)):
-#                     gt_array[i, v_idx] = 0
-#
-#                 for s in heterozygotes:
-#                     gt_array[s2i[s], v_idx] = 1
-#
-#                 for s in homozygotes:
-#                     gt_array[s2i[s], v_idx] = 2
-#
-#                 if v_key not in cache:
-#                     r, prob = vcorrcoef(gt_array, ph_values_and_randos)
-#
-#                     r = r.flatten()
-#                     prob = prob.flatten()[0]
-#
-#                     gt_std = np.std(gt_array.flatten())
-#                     beta_on_std_ph = r / gt_std
-#                     beta = beta_on_std_ph * ph_std
-#
-#                     beta_on_std_ph_std = np.std(beta_on_std_ph)
-#                     abs_mean_on_std_ph = np.mean(np.abs(beta_on_std_ph))
-#
-#                     beta_std = np.std(beta)
-#                     abs_mean = np.mean(np.abs(beta))
-#
-#                     cache[v_key] = (beta_on_std_ph_std, abs_mean_on_std_ph, beta_std, abs_mean, gt_std)
-#
-#                 else:
-#                     r, prob = vcorrcoef(gt_array, ph_values)
-#                     r = r.flatten()
-#                     n_cache_hits += 1
-#                     # echo('key found:', v_key, r, prob, cache[v_key])
-#
-#                 (beta_on_std_ph_std, abs_mean_on_std_ph, beta_std, abs_mean, gt_std) = cache[v_key]
-#
-#                 for k, v in [(VARID_REF_ALT, v[VARID_REF_ALT]),
-#                              (phenotype_name + '/r', r[0]),
-#                              (phenotype_name + '/beta', r[0] * ph_std / gt_std),
-#                              (phenotype_name + '/beta_on_standardized_phenotype', r[0] / gt_std),
-#                              (phenotype_name + '/pvalue', prob),
-#                              (phenotype_name + '/std', ph_std),
-#                              (phenotype_name + '/beta_on_standardized_phenotype/stddev', beta_on_std_ph_std),
-#                              (phenotype_name + '/beta_on_standardized_phenotype/abs_mean', abs_mean_on_std_ph),
-#                              (phenotype_name + '/beta/stddev', beta_std),
-#                              (phenotype_name + '/beta/abs_mean', abs_mean),
-#                              (VCF_AC, new_ac),
-#                              (VCF_AN, new_an),
-#                              (VCF_AF, new_af)]:
-#
-#                     if k not in res:
-#                         res[k] = []
-#
-#                     res[k].append(v)
-#
-#     echo('Creating dataframe')
-#     res = pd.DataFrame(res).drop_duplicates(VARID_REF_ALT)
-#
-#     echo('Merging back with variants')
-#     res = pd.merge(all_variants_in_phenotype_samples, res, on=VARID_REF_ALT, suffixes=['/original', ''])
-#     res = res.sort_values(phenotype_name + '/pvalue')
-#
-#     return res
 
 def test_each_variant_for_association(all_variants_in_phenotype_samples,
                                       ph_data_for_testing,
@@ -252,7 +111,6 @@ def test_each_variant_for_association(all_variants_in_phenotype_samples,
             r, prob = vcorrcoef(gt_array, ph_values)
             r = r.flatten()
             n_cache_hits += 1
-            # echo('key found:', v_key, r, prob, cache[v_key])
 
         (beta_on_std_ph_std, abs_mean_on_std_ph, beta_std, abs_mean, gt_std) = cache[v_key]
 
@@ -311,8 +169,6 @@ def test_each_variant_for_association_old(all_variants_in_phenotype_samples,
         ph_values = pd.DataFrame(permuted_ph_values)
     else:
         ph_values = pd.DataFrame({phenotype_name: ph_data_for_testing[phenotype_name]})
-
-    # all_variants_in_phenotype_samples = all_variants_in_phenotype_samples.drop_duplicates(subset=[VARID_REF_ALT, GENE_NAME])
 
     all_samples = list(ph_data_for_testing[SAMPLE_ID])
     all_samples_set = set(all_samples)
@@ -400,8 +256,6 @@ def read_rare_variants(gene_info_fname,
 
     echo('total variants after filtering for missingness:', rare_variants_full.shape)
 
-    # return rare_variants_full.copy(deep=True), None
-
     if gnomad_coverage is not None:
 
         if len(gnomad_coverage) != 2:
@@ -448,14 +302,8 @@ def read_rare_variants(gene_info_fname,
             all_vals = ph_data[phenotype_name]
 
         echo('Cases:', np.sum(all_vals), ', Controls:', len(all_vals) - np.sum(all_vals))
-        # echo('Treating as continuous phenotype!!')
-        # is_binary = False
 
     echo('Rare variants:', len(rare_variants_full))
-
-    # rare_variants_in_phenotype_samples = filter_variants_for_rv_test(rare_variants_full,
-    #                                                                  all_samples=set(ph_data[SAMPLE_ID]),
-    #                                                                  remove_missing_pAI=False)
 
     echo('Total rare variants:', len(rare_variants_full))
 
@@ -513,14 +361,7 @@ def _test_each_variant_for_association(batch_params):
 
         traceback.print_exc()
 
-        # print
-
         raise e
-
-        # print('%d: %s' % (os.getpid(), traceback.format_exc()))
-        # exit(1)
-
-
 
 
 def main():

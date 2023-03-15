@@ -57,10 +57,8 @@ open_log.time = None
 
 RUNNING_ON = None
 
-USFC = 'USFC'
-USSD = 'USSD'
+HPC = 'HPC'
 DNANEXUS = 'DNANEXUS'
-UNKNOWN_ENVIRONMENT = 'UNKNOWN_ENVIRONMENT'
 
 script_location = os.path.split(os.path.realpath(__file__))[0]
 
@@ -69,14 +67,7 @@ if script_location.startswith(ROOT_PATH):
     UKB_RARE_VARIANTS_PATH = ROOT_PATH + '/pfiziev/rare_variants/data/ukbiobank/'
     ROOT_PFIZIEV_PATH = ROOT_PATH + '/pfiziev/'
     BGEN_DIR = UKB_DATA_PATH + '/array_genotypes/'
-    RUNNING_ON = USFC
-
-elif script_location.startswith(ROOT_PATH_SD):
-    UKB_DATA_PATH = ROOT_PATH_SD + '/pfiziev/ukbiobank/data/'
-    UKB_RARE_VARIANTS_PATH = ROOT_PATH_SD + '/pfiziev/rare_variants/data/ukbiobank/'
-    ROOT_PFIZIEV_PATH = ROOT_PATH_SD + '/pfiziev/'
-    BGEN_DIR = UKB_DATA_PATH + '/array_genotypes/'
-    RUNNING_ON = USSD
+    RUNNING_ON = HPC
 
 elif os.path.exists(script_location + '/running_on') and ''.join(open(script_location + '/running_on', 'rt').readlines()).strip() == 'dnanexus':
     UKB_DATA_PATH = ROOT_DNANEXUS + '/illumina/'
@@ -85,14 +76,6 @@ elif os.path.exists(script_location + '/running_on') and ''.join(open(script_loc
     BGEN_DIR = None
     RUNNING_ON = DNANEXUS
 
-else:
-    UKB_DATA_PATH = ROOT_PATH + '/ukbiobank/data/'
-    UKB_RARE_VARIANTS_PATH = ROOT_PATH + '/pfiziev/rare_variants/data/ukbiobank/'
-    ROOT_PFIZIEV_PATH = ROOT_PATH + '/pfiziev/'
-
-    echo('ERROR: Weird script path:', script_location, ', assuming script runs on Foster City cluster')
-    BGEN_DIR = UKB_DATA_PATH + '/array_genotypes/'
-    RUNNING_ON = UNKNOWN_ENVIRONMENT
 
 def log_max_memory_usage():
 
@@ -134,11 +117,9 @@ echo_debug.on = False
 
 class _GZipFileWriter:
     def __init__(self, fileName):
-        # echo('Constructing _GZipFileWriter:', fileName)
 
         self.f = open(fileName, 'wb')
         self.p = subprocess.Popen(['bgzip'], stdin=subprocess.PIPE, stdout=self.f, universal_newlines=True)
-        # echo('Starting gzip child process:', self.p.pid)
         self.write = self.p.stdin.write
 
     def __enter__(self):
@@ -149,20 +130,13 @@ class _GZipFileWriter:
 
     def close(self):
         self.p.stdin.close()
-        # echo('Waiting on', self.p.pid)
         self.p.wait()
         self.f.close()
 
 
 class _GZipFileReader:
     def __init__(self, fileName):
-        # echo('Constructing _GZipFileWriter:', fileName)
-
-        # self.f = open(fileName, 'rb')
-        # self.p = subprocess.Popen(['bgzip', '-c', '-d', fileName], stdout=subprocess.PIPE, universal_newlines=True)
         self.p = subprocess.Popen(['zcat', fileName], stdout=subprocess.PIPE, universal_newlines=True)
-        # echo('Starting gzip child process:', self.p.pid)
-        # self.read = self.p.stdin.read
 
     def __enter__(self):
         return self.p.stdout
@@ -172,9 +146,7 @@ class _GZipFileReader:
 
     def close(self):
         self.p.stdout.close()
-        # echo('Waiting on', self.p.pid)
         self.p.wait()
-        # self.f.close()
 
 USE_PYTHON_GZIP = False
 def open_file(fname, mode='r', verbose=False):
@@ -190,13 +162,8 @@ def open_file(fname, mode='r', verbose=False):
         if mode in ['w', 'wt'] :
             return _GZipFileWriter(fname)
         elif mode in ['r', 'rt']:
-            # return io.BufferedReader(gzip.open(fname, 'rt'))
             return _GZipFileReader(fname)
 
-            # return gzip.open(fname, 'rt')
-            # in_f = open(fname, 'rb')
-            # p = subprocess.Popen(['gunzip'], stdout=subprocess.PIPE, stdin=in_f)
-            # return p.stdout
         else:
             raise Exception('Only w and r are supported modes for gzipped files. fname=' + fname + ', mode=' + mode)
 
@@ -347,11 +314,6 @@ def spliceai_vcf_to_dataframe(vcf_fname, min_spliceai_score_threshold):
 
                 spliceai_info[GENE_NAME].append(rec.info['SYMBOL'])
                 spliceai_info[SPLICEAI_MAX_SCORE].append(max_spliceai_score)
-    #                 break
-    #                 print(spliceai_info)
-    #                 print(rec)
-
-    #                 return None
 
     res = pd.DataFrame(spliceai_info)
     res[VCF_CHROM] = res[VCF_CHROM].astype(str)
@@ -426,39 +388,6 @@ def read_gnomad_exomes_spliceai(spliceai_fname=DATA_PATH+'spliceai/gnomad.exomes
             res[col] = res[col].astype(str)
 
     return res
-
-
-def get_TCGA_samples_with_variant(var_chrom, var_pos, var_ref, var_alt, sparse_data, return_AC=False):
-    """ Return all TCGA samples with a given variant """
-
-    var_info = sparse_data[VAR_INFO]
-    var_gt = sparse_data[GENOTYPE_SDF]
-
-    tcga_sample_ids = list(var_gt.columns.values)
-
-    var_index = var_info[(var_info[VCF_CHROM] == var_chrom) &
-                         (var_info[VCF_POS] == var_pos) &
-                         (var_info[VCF_REF] == var_ref) &
-                         (var_info[VCF_ALT] == var_alt)][VARIANT_IDX].values
-
-    if len(var_index) == 0:
-        return []
-    elif len(var_index) > 1:
-        echo('ERROR: more than one variant found for:', var_chrom, var_pos, var_ref, var_alt)
-        return None
-    else:
-        var_index = var_index[0]
-        #     print (var_index, type(var_index))
-        all_allele_counts = list(var_gt.iloc[var_index])
-        sample_ids = [tcga_sample_ids[i]
-                      for i in range(len(all_allele_counts)) if not np.isnan(all_allele_counts[i])]
-
-        if return_AC:
-            allele_counts = [all_allele_counts[i]
-                             for i in range(len(all_allele_counts)) if not np.isnan(all_allele_counts[i])]
-            return sample_ids, allele_counts
-        else:
-            return sample_ids
 
 
 def get_samples_with_variant(vcfdata,
@@ -554,39 +483,6 @@ def get_samples_for_variants(vcfdata, homozygotes_only=False, heterozygotes_only
         return sorted(set(sid for sids in vcfdata.info[tag] for sid in sids.split(',')))
 
 
-def subset_tcga_variants(sparse_data, sample_ids, verbose=True):
-    """ Return all variants found in a set of sample IDs """
-
-    var_info = sparse_data[VAR_INFO]
-    var_gt = sparse_data[GENOTYPE_SDF]
-
-    common_ids = sorted(set(var_gt.columns.values) & set(sample_ids))
-
-    if verbose and len(common_ids) != len(sample_ids):
-        echo('WARNING:', len(sample_ids) - len(common_ids), 'sample IDs could not be found')
-
-    if verbose:
-        echo('Subsetting', len(common_ids), 'sample IDs')
-
-    sample_ids = common_ids
-
-    sm = var_gt[sample_ids].to_coo().tocsr()
-    rows_to_keep = (sm.getnnz(1) > 0)
-
-    sm_nzrows = sm[rows_to_keep]
-    subset_var_gt = pd.SparseDataFrame(sm_nzrows.tocoo(), columns=sample_ids)
-
-    subset_var_info = pd.merge(var_info, pd.DataFrame({VARIANT_IDX:
-                                                       [r_idx
-                                                        for r_idx, r_to_keep in enumerate(rows_to_keep)
-                                                        if r_to_keep]})).copy()
-
-    subset_var_info[VARIANT_IDX] = list(range(len(subset_var_info)))
-    subset_var_info = subset_var_info.set_index(VARIANT_IDX, drop=False)
-
-    return subset_var_info, subset_var_gt
-
-
 def subset_variants(info=None, anno=None, sparse_data=None, sample_ids=None, sample_ids_to_exculde=None, verbose=False):
     """ Return all variants found in a set of sample IDs """
 
@@ -599,9 +495,6 @@ def subset_variants(info=None, anno=None, sparse_data=None, sample_ids=None, sam
         common_ids = common_ids - set(sample_ids_to_exculde)
 
     common_ids = sorted(common_ids)
-
-    # if verbose and len(common_ids) != len(sample_ids):
-    #     echo('WARNING:', len(sample_ids) - len(common_ids), 'sample IDs could not be found')
 
     if verbose:
         echo('Subsetting', len(common_ids), 'sample IDs')
@@ -642,19 +535,6 @@ def subset_variants(info=None, anno=None, sparse_data=None, sample_ids=None, sam
     new_var_stats[VCF_AN] = allele_numbers.astype(int)
     new_var_stats[VCF_AF] = new_var_stats[VCF_AC] / new_var_stats[VCF_AN]
 
-
-    # sm = sparse_data[common_ids].to_coo().tocsr()
-    #
-    # subset_sparse_data = pd.SparseDataFrame(sm.tocoo(), columns=common_ids)
-    #
-    # allele_counts = np.squeeze(np.asarray(sm.sum(axis=1).transpose()))
-    #
-    # new_var_stats = pd.DataFrame({VARIANT_IDX: list(range(len(sparse_data)))})
-    #
-    # new_var_stats[VCF_AC] = allele_counts.astype(int)
-    # new_var_stats[VCF_AN] = 2 * len(common_ids)
-    # new_var_stats[VCF_AF] = new_var_stats[VCF_AC] / new_var_stats[VCF_AN]
-
     subset_info = pd.merge(info, new_var_stats, on=VARIANT_IDX, suffixes=['_OLD', ''])
     subset_info = subset_info[[c for c in list(subset_info) if not c.endswith('_OLD')]]
 
@@ -663,61 +543,6 @@ def subset_variants(info=None, anno=None, sparse_data=None, sample_ids=None, sam
     subset_anno = pd.merge(anno, subset_info, on=VARIANT_IDX)[list(anno)].copy()
 
     return subset_info, subset_anno, subset_sparse_data
-
-TCGA_SAMPLE_ID = 'aliquot_submitter_id'
-
-
-class TCGAmeta:
-
-    def __getitem__(self, key):
-        return self.tcga_metadata[key]
-
-    def __init__(self):
-        echo('new2')
-        self.tcga_metadata = {}
-
-        tcga_metadata_fnames = ['aliquot.tsv', 'analyte.tsv', 'clinical.tsv', 'exposure.tsv', 'portion.tsv',
-                                'sample.tsv', 'slide.tsv']
-
-        for fname in tcga_metadata_fnames:
-
-            echo('Reading:', fname)
-
-            self.tcga_metadata[fname.replace('.tsv', '')] = pd.read_csv(TCGA_METAINFO_PATH + '/' + fname,
-                                                                        sep='\t',
-                                                                        header=0,
-                                                                        na_values=['--'])
-
-        self.tcga_metadata['clinical']['age_at_diagnosis_years'] = \
-            self.tcga_metadata['clinical']['age_at_diagnosis'] / 365
-
-    def get_sample_ids_for_project(self, project_id):
-        return list(
-                self.tcga_metadata['aliquot'][self.tcga_metadata['aliquot']['project_id'] == project_id][TCGA_SAMPLE_ID])
-
-    def get_all_projects(self):
-        return sorted(set(self.tcga_metadata['aliquot']['project_id']))
-
-    def get_sample_info(self, sample_ids=None):
-
-        tcga_meta = self.tcga_metadata
-
-        d = pd.merge(pd.merge(tcga_meta['aliquot'],
-                              tcga_meta['clinical'], on='case_id', suffixes=['', '_clinical']),
-                     tcga_meta['exposure'],
-                     on='case_id',
-                     how='left',
-                     suffixes=['', '_exposure'])
-
-        cols_to_return = [c for c in list(d) if not c.endswith('_clinical') and not c.endswith('_exposure')]
-
-        if sample_ids is not None:
-            if type(sample_ids) is not list:
-                sample_ids = [sample_ids]
-            return d[d[TCGA_SAMPLE_ID].isin(sample_ids)][cols_to_return]
-        else:
-            return d[cols_to_return]
-
 
 class VcfData:
 
@@ -1222,12 +1047,6 @@ def combine_datasets(vcfdata_1, vcfdata_2):
     return VcfData(info=combined_info, annotation=combined_annotation)
 
 
-# display(ambryshare_BRCA_vs_gnomad_non_cancer_by_ethnicity_gender_joint['female_nfe'][0].info.head())
-# display(ambryshare_BRCA_vs_gnomad_non_cancer_by_ethnicity_gender_joint['female_nfe'][1].info.head())
-# %%capture ambryshare_BRCA_stats_out1
-# pydevd.stoptrace()
-# pydevd.settrace('10.112.113.22', port=21213, stdoutToServer=True, stderrToServer=True)
-
 def compute_mean_exon_coverage(dataset, gencode_exons, consequence=None, coverage=None):
 
     dataset = filter_variants(dataset, consequence=consequence)
@@ -1316,7 +1135,6 @@ def joint_exon_coverage(cov1,
 def get_icd10_phenotypes(diagnoses, icd10_diagnosis_col_name='41202'):
 
     n_samples = len(diagnoses)
-    # n_samples = 1000
     echo('n_samples=', n_samples)
 
     icd10_col_names = [col for col in list(diagnoses) if col.startswith(icd10_diagnosis_col_name + '-')]
@@ -1344,9 +1162,6 @@ def get_icd10_phenotypes(diagnoses, icd10_diagnosis_col_name='41202'):
 
         for col in icd10_col_names:
             current_icd10_code = diagnoses.iloc[row_idx][col]
-
-            # if row_idx < 3:
-            #     echo(userId, col, current_icd10_code)
 
             if type(current_icd10_code) is not float:
                 icd10_phenotypes[icd10_diagnosis_col_name + '_' + current_icd10_code][row_idx] = True
@@ -1453,9 +1268,6 @@ def load_genotypes(data_path, gnomad_coverage, sample_ids_to_exclude=None, load_
     gt_sparse_matrix = scipy.sparse.load_npz(data_path + 'genotypes.npz')
     gt_sdf = pd.SparseDataFrame(gt_sparse_matrix, columns=all_sample_ids[SAMPLE_ID])
 
-    # remove sample outliers based on number of variants
-    # gt_sdf = remove_sample_outliers(gt_sdf)
-
     if sample_ids_to_exclude is not None:
         gt_sdf = gt_sdf[[sample_id for sample_id in list(gt_sdf) if sample_id not in sample_ids_to_exclude]]
 
@@ -1533,10 +1345,7 @@ def exon_coverage_qqplot(stats_object, pvalue_label, title_prefix=''):
 
     ax[1].plot(log_expected, log_observed, 'r.')
 
-    # bins = np.histogram(np.hstack((stats_object[dataset_labels[0]],
-    #                                stats_object[dataset_labels[1]])), bins=50)[1]
-
-    bins = list(range(25))  # + [1000]
+    bins = list(range(25))
 
     for ax_idx in [0, 1]:
         axisMax = (max(max(log_expected), max(log_observed)) + 0.5) if ax_idx == 1 else 1
@@ -1724,7 +1533,6 @@ def filter_variants(vcfdata,
         info[VCF_AF] = info[VCF_AC] / info[VCF_AN]
 
     if sample_ids is not None or sample_ids_to_exculde is not None:
-        # echo('Total samples:', len(sample_ids))
         info, anno, sparse_data = subset_variants(info=info,
                                                   anno=anno,
                                                   sparse_data=vcfdata.sparse_data,
@@ -1734,21 +1542,8 @@ def filter_variants(vcfdata,
 
     if white_listed_exons is not None:
         info = intersect_variants(vcfdata, white_listed_exons, offset=5).info
-        #
-        #
-        #
-        # var_info = pd.merge(info, anno, on=VARIANT_IDX)
-        #
-        # to_keep = pd.merge(var_info, white_listed_exons, on=GENE_NAME)
-        #
-        # to_keep = to_keep[(to_keep[VCF_POS] >= to_keep['start'] - 5) & (to_keep[VCF_POS] < to_keep['end'] + 5)]
-        # to_keep = to_keep[[VARIANT_IDX]].drop_duplicates(VARIANT_IDX)
-        #
-        # info = pd.merge(info, to_keep, on=VARIANT_IDX)
 
     if black_listed_exons is not None:
-        # info = intersect_variants(vcfdata, black_listed_exons, offset=5, exclude=True).info
-        #
         var_info = pd.merge(info, anno, on=VARIANT_IDX)
 
         to_remove = pd.merge(var_info, black_listed_exons, on=GENE_NAME)
@@ -1877,39 +1672,6 @@ def filter_variants(vcfdata,
         anno = anno[anno[PRIMATEAI_SCORE] >= min_primateAI_score]
         info = pd.merge(info, anno[[VARIANT_IDX]].drop_duplicates(), on=VARIANT_IDX)
 
-    if cancer_type is not None:
-
-        echo('Filtering by cancer type:', cancer_type)
-
-        if type(cancer_type) is not list:
-            cancer_type = [cancer_type]
-
-        cancer_sample_ids = []
-
-        for ct in cancer_type:
-
-            if ct.startswith('RANDOM'):
-                n_random = int(ct.split('|')[1])
-                echo('Choosing', n_random, 'samples from TCGA')
-                cancer_sample_ids += random.sample(list(tcga_sparse_data[GENOTYPE_SDF]), n_random)
-
-            else:
-                cancer_sample_ids += tcga_meta.get_sample_ids_for_project(ct)
-
-        cancer_sample_ids = sorted(set(cancer_sample_ids))
-
-    if cancer_sample_ids is not None:
-
-        echo('Total samples:', len(cancer_sample_ids))
-
-        ct_var_info, ct_var_genotypes = subset_tcga_variants(tcga_sparse_data,
-                                                             cancer_sample_ids)
-
-        info = pd.merge(info,
-                        ct_var_info,
-                        on=[VCF_CHROM, VCF_POS, VCF_REF, VCF_ALT],
-                        how='inner',
-                        suffixes=('', '_sparse_df'))
 
     for key, value in kwargs.items():
         echo('Filtering custom keys:', key, value)
@@ -2062,21 +1824,12 @@ def filter_gnomad_populations(vcfdata, filter_nfe=True, gender=None, is_cancer=T
 
     anno = vcfdata.annotation
 
-    # if gencode_info is not None:
-    #     anno = pd.merge(anno,
-    #                     gencode_info,
-    #                     left_on=['Feature', GENE_NAME],
-    #                     right_on=['transcript_id', GENE_NAME])[list(anno)].copy()
-
     info = pd.merge(info, anno[[VARIANT_IDX]].drop_duplicates(), on=VARIANT_IDX, how='inner').copy()
 
     anno = pd.merge(anno, info[[VARIANT_IDX]], on=VARIANT_IDX, how='inner')
 
     return VcfData(info=info, annotation=anno)
 
-
-# print(len(filter_variants(gnomad_exomes_cancer_only,
-#                           info_condition=(gnomad_exomes_cancer_only.info['AC_nfe'] > 0)).info))
 
 
 ########################################################################################################################
@@ -2109,50 +1862,6 @@ def get_all_variants_for_gene(gene_name, vcfdata, consequence=None, max_AF=None,
         result = result[result['joint_' + VCF_AC] <= max_joint_AC]
 
     return result
-
-
-def get_tcga_sample_info_for_variants(vcfdata_or_vcfdatainfo, tcga_sparse_data, tcga_meta):
-
-    if type(vcfdata_or_vcfdatainfo) is VcfData:
-        vars_info = vcfdata_or_vcfdatainfo.info
-    else:
-        vars_info = vcfdata_or_vcfdatainfo
-
-    n_vars = len(vars_info)
-
-    col_names = list(vars_info)
-
-    res = dict((col, []) for col in col_names)
-    res[TCGA_SAMPLE_ID] = []
-
-    for var_idx in range(n_vars):
-
-        var_chrom = vars_info[VCF_CHROM].iloc[var_idx]
-
-        var_pos = vars_info[VCF_POS].iloc[var_idx]
-        var_ref = vars_info[VCF_REF].iloc[var_idx]
-        var_alt = vars_info[VCF_ALT].iloc[var_idx]
-
-        sample_ids = get_TCGA_samples_with_variant(var_chrom,
-                                                   var_pos,
-                                                   var_ref,
-                                                   var_alt,
-                                                   tcga_sparse_data)
-        #         echo(var_pos, sample_ids)
-
-        if len(sample_ids) == 0:
-            sample_ids = [None]
-
-        for s_id in sample_ids:
-            for col in col_names:
-                res[col].append(vars_info[col].iloc[var_idx])
-
-            res[TCGA_SAMPLE_ID].append(s_id)
-
-    return pd.merge(pd.DataFrame(res),
-                    tcga_meta.get_sample_info(res[TCGA_SAMPLE_ID]),
-                    on=TCGA_SAMPLE_ID,
-                    how='left')
 
 
 ########################################################################################################################
@@ -2213,26 +1922,12 @@ MIN_ODDS_RATIO = 10**-10
 
 def odds_ratio(fgr, fgr_total, bgr, bgr_total):
 
-    # fgr += .5
-    # fgr_total += 1
-    # bgr += .5
-    # bgr_total += 1
-
     if fgr == 0 or bgr == 0 or fgr_total - fgr == 0 or bgr_total - bgr == 0:
-    #
-    #     # pseudo_count_fgr = 1
-    #     # pseudo_count_bgr = pseudo_count_fgr * bgr_total / fgr_total
-    #     #
-    #     # fgr += pseudo_count_fgr
-    #     # fgr_total += 2 * pseudo_count_fgr
-    #     #
-    #     # bgr += pseudo_count_bgr
-    #     # bgr_total += 2 * pseudo_count_bgr
 
         if fgr == 0 or bgr_total - bgr == 0:
             return MIN_ODDS_RATIO
 
-        else: # bgr == 0 or fgr_total - fgr == 0:
+        else:
             return 1 / MIN_ODDS_RATIO
 
     def _odds(k, n):
@@ -2280,18 +1975,11 @@ def compute_test_variant_counts_on_gene_lists(vars_per_gene_1,
 
         res = pd.DataFrame(gene_sets_dict)
 
-    # pseudo_count_x = .5
-    # pseudo_count_y = pseudo_count_x * total_y / total_x
-
     def _chisquare(c_x, c_y):
         if (total_x > 0 and
                 total_y > 0 and
                 c_x + c_y > 0 and
                 total_x - c_x + total_y - c_y > 0):
-
-            #         return scipy.stats.chisquare([c_x, total_x - c_x],
-            #                                      [total_x * float(c_y) / total_y,
-            #                                       total_x * (float(total_y - c_y)) / total_y])[1]
 
             return chi2_or_fisher_test([[c_x, total_x - c_x],
                                         [c_y, total_y - c_y]])
@@ -2304,24 +1992,13 @@ def compute_test_variant_counts_on_gene_lists(vars_per_gene_1,
                                       p=c_y / total_y,
                                       alternative=alternative)
 
-    # def _enrichment(c_x, c_y):
-    #     if c_x == 0 or c_y == 0:
-    #         return ((c_x + pseudo_count_x) / (total_x + pseudo_count_x)) / ((c_y + pseudo_count_y) / (total_y + pseudo_count_y))
-    #     else:
-    #         return (c_x / total_x) / (c_y / total_y)
-
     pvalue_label = cons_label + '|chi2_pvalue'
     pvalues = res.apply(lambda r: _chisquare(r[1], r[2]), axis=1)
 
-    #     pvalue_label = cons_label + '|binom_pvalue'
-    #     pvalues = res.apply(lambda r: _binom_test(r[1], r[2], alternative), axis=1)
 
     res[pvalue_label] = pvalues
     res[cons_label + '|chi2_FDR'] = statsmodels.stats.multitest.multipletests(pvalues, method='fdr_bh')[1]
 
-    # enrichments = res.apply(lambda r: _enrichment(r[1], r[2]), axis=1)
-    #
-    # res[cons_label + '|enr'] = enrichments
     res[cons_label + '|OR'] = res.apply(lambda r: odds_ratio(r[1], total_x, r[2], total_y), axis=1)
 
     res[cons_label + '|total|' + set1_label] = int(total_x)
@@ -2379,7 +2056,6 @@ def get_primateai_per_gene(vcfdata, consequence, primateai_with_gene_names, medi
 
         def replicate(column):
 
-            # echo('replicate call')
             new_values = [None] * total_alleles
             new_values_cur_idx = 0
 
@@ -2468,8 +2144,6 @@ def remove_sample_outliers(sparse_data, k_percent=0.025):
     return sparse_data.iloc[:, to_keep] #sparse_data[to_keep.index[to_keep]]
 
 
-
-
 def logit_variant_count_test(cases,
                              cases_label,
                              controls,
@@ -2489,11 +2163,9 @@ def logit_variant_count_test(cases,
 
 
     def logit_test(x,
-                   # cases,
                    cases_label,
                    n_cases_samples,
                    all_cases_variants,
-                   # controls,
 
                    controls_label,
                    n_controls_samples,
@@ -2507,29 +2179,8 @@ def logit_variant_count_test(cases,
                    constant_vector_with_pseudo_count,
                    covariates_df_with_pseudo_count):
 
-        # if logit_test.count % 1000 == 0:
-        #     echo('genes processed:', logit_test.count)
 
         logit_test.count += 1
-
-        # if logit_test.count < 3143:
-        #     return pd.Series({cons_label + '|logit_pvalue': np.nan,
-        #
-        #                   cons_label + '|OR': np.nan,
-        #                   cons_label + '|OR_95%_CI_low': np.nan,
-        #                   cons_label + '|OR_95%_CI_high': np.nan,
-        #
-        #                   cons_label + '|n|' + cases_label: np.nan,
-        #                   cons_label + '|n|' + controls_label: np.nan,
-        #
-        #                   cons_label + '|samples|' + cases_label: np.nan,
-        #                   cons_label + '|samples|' + controls_label: np.nan,
-        #
-        #
-        #                   })
-
-
-        # n_variants = len(x)
 
         var_indexes = x[VARIANT_IDX]
 
@@ -2549,7 +2200,6 @@ def logit_variant_count_test(cases,
 
         else:
             if n_cases_variants == 0 or n_controls_variants == 0:
-                # echo('using pseudo counts')
                 logit_test.n_with_pseudocount += 1
 
                 logit_response = logit_response_with_pseudo_count
@@ -2569,12 +2219,9 @@ def logit_variant_count_test(cases,
             else:
                 predictors = pd.DataFrame()
 
-            # echo('genes processed with logit test:', logit_test.count - 1, np.sum(cases_vector), np.sum(controls_vector))
-
             predictors['const'] = constant_vector
             predictors['rare_variants'] = np.concatenate((cases_vector, controls_vector))
             rare_variants_idx = -1
-            # echo(x.iloc[0][GENE_NAME])#, np.sum(cases_vector), np.sum(controls_vector))
 
             import statsmodels.api as sm
             logit_mod = sm.Logit(logit_response, predictors)
@@ -2591,15 +2238,6 @@ def logit_variant_count_test(cases,
 
             OR_95_CI_low = np.exp(beta_conf95_low)
             OR_95_CI_high = np.exp(beta_conf95_high)
-            #
-            # echo('gene name:',
-            #      x.iloc[0][GENE_NAME],
-            #      np.sum(cases_vector),
-            #      np.sum(controls_vector),
-            #      pvalue,
-            #      OR,
-            #      OR_95_CI_low,
-            #      OR_95_CI_high)
 
             if x.iloc[0][GENE_NAME] in ['LDLR', 'PCSK9']:
                 echo(x.iloc[0][GENE_NAME])
@@ -2645,14 +2283,6 @@ def logit_variant_count_test(cases,
                                consequence=consequence,
                                gene_set=gene_set)
 
-    # variants = annotations[annotations[VCF_CONSEQUENCE].isin(consequence)]
-    #
-    # cases_variants = pd.merge(cases.info, variants, on=VARIANT_IDX)[list(variants)]
-    # controls_variants = pd.merge(controls.info, variants, on=VARIANT_IDX)[list(variants)]
-
-
-    # cases_variants = cases.annotation
-    # controls_variants = controls.annotation
     variants = pd.concat([cases.annotation, controls.annotation], ignore_index=True).drop_duplicates()
 
     n_cases_samples = len(list(cases.sparse_data))
@@ -2672,16 +2302,11 @@ def logit_variant_count_test(cases,
     covariates_df_with_pseudo_count = None
 
     if use_per_individual_allele_counts_as_covariate:
-        # var_indexes =
         var_indexes = [int(ind) for ind in variants[VARIANT_IDX]]
 
         echo('Total variants:', len(var_indexes))
 
         total_alleles_per_case = all_cases_variants[var_indexes, :].tocsc().sum(axis=0).A[0, :]
-        # total_alleles_per_case = all_cases_variants[var_indexes, :]
-        # total_alleles_per_case = total_alleles_per_case.tocsc()
-        # total_alleles_per_case = total_alleles_per_case.sum(axis=0)
-        # total_alleles_per_case = total_alleles_per_case.A[0, :]
 
 
         echo('total and average AC per case sample:',
@@ -2727,11 +2352,9 @@ def logit_variant_count_test(cases,
 
 
     res = variants.groupby(GENE_NAME).apply(logit_test,
-                                            # cases,
                                             cases_label,
                                             n_cases_samples,
                                             all_cases_variants,
-                                            # controls,
                                             controls_label,
                                             n_controls_samples,
                                             all_controls_variants,
@@ -2746,7 +2369,6 @@ def logit_variant_count_test(cases,
                                             ).sort_values(cons_label + '|logit_pvalue')
 
     res = res.reset_index()
-    # res[GENE_NAME] = res.index
 
     echo('Genes with added pseudo counts:', logit_test.n_with_pseudocount)
     return res
@@ -2771,11 +2393,9 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
 
 
     def logit_test(x,
-                   # cases,
                    cases_label,
                    n_cases_samples,
                    all_cases_variants,
-                   # controls,
 
                    controls_label,
                    n_controls_samples,
@@ -2789,29 +2409,8 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
                    constant_vector_with_pseudo_count,
                    covariates_df_with_pseudo_count):
 
-        # if logit_test.count % 1000 == 0:
-        #     echo('genes processed:', logit_test.count)
 
         logit_test.count += 1
-
-        # if logit_test.count < 3143:
-        #     return pd.Series({cons_label + '|logit_pvalue': np.nan,
-        #
-        #                   cons_label + '|OR': np.nan,
-        #                   cons_label + '|OR_95%_CI_low': np.nan,
-        #                   cons_label + '|OR_95%_CI_high': np.nan,
-        #
-        #                   cons_label + '|n|' + cases_label: np.nan,
-        #                   cons_label + '|n|' + controls_label: np.nan,
-        #
-        #                   cons_label + '|samples|' + cases_label: np.nan,
-        #                   cons_label + '|samples|' + controls_label: np.nan,
-        #
-        #
-        #                   })
-
-
-        # n_variants = len(x)
 
         var_indexes = x[VARIANT_IDX]
 
@@ -2823,7 +2422,6 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
 
 
         if n_cases_variants == 0 and n_controls_variants == 0:
-            # echo('Warning: no variants found in gene:', x.iloc[0][GENE_NAME])
             pvalue = np.nan
             OR = np.nan
             OR_95_CI_low = np.nan
@@ -2831,7 +2429,6 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
 
         else:
             if n_cases_variants == 0 or n_controls_variants == 0:
-                # echo('using pseudo counts')
                 logit_test.n_with_pseudocount += 1
 
                 logit_response = logit_response_with_pseudo_count
@@ -2851,12 +2448,9 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
             else:
                 predictors = pd.DataFrame()
 
-            # echo('genes processed with logit test:', logit_test.count - 1, np.sum(cases_vector), np.sum(controls_vector))
-
             predictors['const'] = constant_vector
             predictors['rare_variants'] = np.concatenate((cases_vector, controls_vector))
             rare_variants_idx = -1
-            # echo(x.iloc[0][GENE_NAME])#, np.sum(cases_vector), np.sum(controls_vector))
 
             import statsmodels.api as sm
             logit_mod = sm.Logit(logit_response, predictors)
@@ -2873,15 +2467,6 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
 
             OR_95_CI_low = np.exp(beta_conf95_low)
             OR_95_CI_high = np.exp(beta_conf95_high)
-            #
-            # echo('gene name:',
-            #      x.iloc[0][GENE_NAME],
-            #      np.sum(cases_vector),
-            #      np.sum(controls_vector),
-            #      pvalue,
-            #      OR,
-            #      OR_95_CI_low,
-            #      OR_95_CI_high)
 
             if x.iloc[0][GENE_NAME] in ['LDLR', 'PCSK9']:
                 echo(x.iloc[0][GENE_NAME])
@@ -2982,15 +2567,6 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
     all_cases_weights = get_weights_for_regression(all_cases_scores, cases_primateai, cases_spliceai, cases_ptvs.info)
     all_controls_weights = get_weights_for_regression(all_controls_scores, controls_primateai, controls_spliceai, controls_ptvs.info)
 
-
-    # variants = annotations[annotations[VCF_CONSEQUENCE].isin(consequence)]
-    #
-    # cases_variants = pd.merge(cases.info, variants, on=VARIANT_IDX)[list(variants)]
-    # controls_variants = pd.merge(controls.info, variants, on=VARIANT_IDX)[list(variants)]
-
-
-    # cases_variants = cases.annotation
-    # controls_variants = controls.annotation
     variants = pd.concat([cases.annotation, controls.annotation], ignore_index=True).drop_duplicates()
 
     n_cases_samples = len(list(cases.sparse_data))
@@ -3016,11 +2592,6 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
         echo('Total variants:', len(var_indexes))
 
         total_alleles_per_case = all_cases_variants[var_indexes, :].tocsc().sum(axis=0).A[0, :]
-        # total_alleles_per_case = all_cases_variants[var_indexes, :]
-        # total_alleles_per_case = total_alleles_per_case.tocsc()
-        # total_alleles_per_case = total_alleles_per_case.sum(axis=0)
-        # total_alleles_per_case = total_alleles_per_case.A[0, :]
-
 
         echo('total and average AC per case sample:',
              np.sum(total_alleles_per_case),
@@ -3065,11 +2636,9 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
 
 
     res = variants.groupby(GENE_NAME).apply(logit_test,
-                                            # cases,
                                             cases_label,
                                             n_cases_samples,
                                             all_cases_weights,
-                                            # controls,
                                             controls_label,
                                             n_controls_samples,
                                             all_controls_weights,
@@ -3084,7 +2653,6 @@ def case_control_logit_variant_count_test_for_deleterious_variants(cases,
                                             ).sort_values(cons_label + '|logit_pvalue')
 
     res = res.reset_index()
-    # res[GENE_NAME] = res.index
 
     echo('Genes with added pseudo counts:', logit_test.n_with_pseudocount)
     return res
@@ -3151,16 +2719,6 @@ def primateai_test(fgr_vcfdata,
 
         gene_name = x.iloc[0][GENE_NAME]
 
-        # transcript_id = x.iloc[0][TRANSCRIPT_ID]
-        #
-        # print(gene_name)
-
-        #         print('AAAAAA')
-        #         print(x)
-
-        #         if gene_name != 'A1BG':
-        #             raise "AA"
-
         score_threshold = median_primateai_per_gene.loc[gene_name]['median_' + PRIMATEAI_SCORE]
 
         count_geq = lambda a: len([el for el in a if el > score_threshold])
@@ -3176,17 +2734,6 @@ def primateai_test(fgr_vcfdata,
             fgr_greater_than_threshold + bgr_greater_than_threshold > 0 and
             total_fgr - fgr_greater_than_threshold + total_bgr - bgr_greater_than_threshold > 0):
 
-            #             test_pvalue = scipy.stats.binom_test(fgr_greater_than_threshold,
-            #                                                   n=total_fgr,
-            #                                                   p=bgr_greater_than_threshold / total_bgr,
-            #                                                   alternative='greater')
-
-            #             test_pvalue = scipy.stats.chisquare([fgr_greater_than_threshold,
-            #                                             total_fgr - fgr_greater_than_threshold],
-
-            #                                            [total_fgr * bgr_greater_than_threshold / total_bgr,
-            #                                             total_fgr * (total_bgr - bgr_greater_than_threshold) / total_bgr])[1]
-
             test_pvalue = chi2_or_fisher_test([[fgr_greater_than_threshold, total_fgr - fgr_greater_than_threshold],
                                                [bgr_greater_than_threshold, total_bgr - bgr_greater_than_threshold]])
 
@@ -3195,22 +2742,16 @@ def primateai_test(fgr_vcfdata,
                                 bgr_greater_than_threshold,
                                 total_bgr)
 
-            # test_pvalue = 1
-            # odds_r = 1
         else:
             test_pvalue = np.nan
-            # enr = np.nan
             odds_r = np.nan
 
 
-        return pd.Series({  # 'chi^2_pvalue': p_value,
-            # PRIMATEAI_OVER_MEDIAN_TEST + '|enr': enr,
+        return pd.Series({
             PRIMATEAI_OVER_MEDIAN_TEST + '|OR': odds_r,
-            #                           'p_value2':p_value2,
 
             PRIMATEAI_OVER_MEDIAN_TEST + '|chi2_pvalue': test_pvalue,
 
-            #                           'primateAI|' + consequence + '|binom_pvalue': binom_pvalue,
             PRIMATEAI_OVER_MEDIAN_TEST + '|t': score_threshold,
 
             PRIMATEAI_OVER_MEDIAN_TEST + '|>t #|' + fgr_label: fgr_greater_than_threshold,
@@ -3239,8 +2780,6 @@ def primateai_test(fgr_vcfdata,
 
     res[PRIMATEAI_OVER_MEDIAN_TEST + '|chi2_FDR'][non_nan_genes] = statsmodels.stats.multitest.multipletests(non_nan_pvalues[PRIMATEAI_OVER_MEDIAN_TEST + '|chi2_pvalue'], method='fdr_bh')[1]
 
-    # res[PRIMATEAI_OVER_MEDIAN_TEST + '|chi2_FDR'] = statsmodels.stats.multitest.multipletests(res[PRIMATEAI_OVER_MEDIAN_TEST + '|chi2_pvalue'], method='fdr_bh')[1]
-
     res = res.reset_index()
 
     return res
@@ -3264,7 +2803,6 @@ def primateai_best_threshold_test(fgr_vcfdata,
 
         best_threshold = np.nan
         best_pvalue = 1
-        # best_enrichment = 1
         best_odds_ratio = np.nan
 
         fgr_idx = 0
@@ -3311,18 +2849,8 @@ def primateai_best_threshold_test(fgr_vcfdata,
                                                  bgr_greater,
                                                  bgr_total)
 
-                    # if fgr_greater == 0 or bgr_greater == 0:
-                    #
-                    #     pseudo_count_x = .5
-                    #     pseudo_count_y = pseudo_count_x * bgr_total / fgr_total
-                    #
-                    #     best_enrichment = ((pseudo_count_x + fgr_greater) / (pseudo_count_x + fgr_total)) / (
-                    #                        (pseudo_count_y + bgr_greater) / (pseudo_count_y + bgr_total))
-                    # else:
-                    #
-                    #     best_enrichment = (fgr_greater / fgr_total) / (bgr_greater / bgr_total)
 
-        return pd.Series({  #PRIMATEAI_BEST_THRESHOLD_TEST + '|enr': best_enrichment,
+        return pd.Series({
                             PRIMATEAI_BEST_THRESHOLD_TEST + '|OR': best_odds_ratio,
 
                             PRIMATEAI_BEST_THRESHOLD_TEST + '|chi2_pvalue': min(best_pvalue * len(thresholds), 1),  # correct for multiple testing
@@ -3421,7 +2949,6 @@ def count_spliceai_variants_per_gene(vcfinfo, set_label, use_allele_counts, cons
 
         def replicate(column):
 
-            # echo('replicate call')
             new_values = [None] * total_alleles
             new_values_cur_idx = 0
 
@@ -3464,8 +2991,6 @@ def test_spliceai_for_gnomad_exomes(fgr_vcfdata,
                                                        gene_sets=gene_sets)
 
     return result
-
-
 
 def counts_test_for_deleterious_variants(fgr_vcfdata,
                                          fgr_label,
@@ -3609,15 +3134,6 @@ def dataset_stats(fgr_vcfdata=None,
         fgr = filter_variants(fgr_variants, consequence=var_type)
         echo((str(var_type) if var_type is not None else 'All variants'), 'per sample:', sum(fgr.info[VCF_AC]) / n_fgr_samples)
 
-    # if gnomad_samples_per_cancer_type is not None:
-    #     if cancer_type is None:
-    #         n_fgr_samples_estimate = sum(len(gnomad_samples_per_cancer_type[k]) for k in gnomad_samples_per_cancer_type)
-    #     else:
-    #         n_fgr_samples_estimate = len(gnomad_samples_per_cancer_type[cancer_type])
-    #
-    #     echo('Estimated n_samples:', n_fgr_samples_estimate)
-    #     echo('Foreground alleles per sample (estimated):', sum(fgr_variants.info[VCF_AC]) / n_fgr_samples_estimate)
-
     n_bgr_samples = max(bgr_vcfdata.info[VCF_AN]) / 2
 
     bgr_variants = filter_variants(bgr_vcfdata,
@@ -3643,10 +3159,6 @@ def dataset_stats(fgr_vcfdata=None,
     for var_type in [None, VCF_MISSENSE_VARIANT, VCF_SYNONYMOUS_VARIANT, ALL_PTV]:
         bgr = filter_variants(bgr_variants, consequence=var_type)
         echo((str(var_type) if var_type is not None else 'All variants'), 'per sample:', sum(bgr.info[VCF_AC]) / n_bgr_samples)
-
-    # echo('Background alleles per sample:', sum(bgr_variants.info[VCF_AC]) / n_bgr_samples)
-
-
 
 def compute_variant_stats(fgr_vcfdata=None,
                           fgr_label=None,
@@ -3841,43 +3353,9 @@ def compute_variant_stats(fgr_vcfdata=None,
                                                        use_allele_counts=use_allele_counts)
             result = merge_results(result, cur_result)
 
-        # echo('Comparing missense variants above gene-specific median threshold for PrimateAI scores')
-        # cur_result = missense_counts_test_over_median_primateai_score( fgr_variants,
-        #                                                                fgr_label,
-        #
-        #                                                                bgr_variants,
-        #                                                                bgr_label,
-        #
-        #                                                                primateai_with_gene_names,
-        #                                                                primateai_quantile=primateai_quantile,
-        #                                                                use_allele_counts=use_allele_counts,
-        #                                                                gene_sets=gene_sets)
-        #
-        # result = merge_results(result, cur_result)
-        #
-        # if gene_sets is None:
-        #     echo('Comparing PrimateAI scores within the same gene for missense variants')
-        #     cur_result = primateai_test(fgr_variants,
-        #                                 fgr_label,
-        #
-        #                                 bgr_variants,
-        #                                 bgr_label,
-        #
-        #                                 primateai_with_gene_names=primateai_with_gene_names,
-        #                                 primateai_quantile=primateai_quantile,
-        #                                 use_allele_counts=use_allele_counts)
-        #
-        #     result = merge_results(result, cur_result)
-
     if variant_types_to_test is None:
         variant_types_to_test = [(VCF_MISSENSE_VARIANT, 'missense'),
-                                 # ([VCF_STOP_GAINED, VCF_FRAMESHIFT_VARIANT], 'stop,frameshift'),
-                                 # (VCF_SPLICE_REGION_VARIANT, 'splice_region'),
-                                 # ([VCF_SPLICE_DONOR_VARIANT, VCF_SPLICE_ACCEPTOR_VARIANT], 'splice_do,ac'),
-                                 # (VCF_NMD_TRANSCRIPT_VARIANT, 'NMD'),
                                  (ALL_PTV, 'all_PTV'),
-                                 # (ALL_PTV, 'all_PTV.SNV'),
-                                 # (ALL_PTV, 'all_PTV.INDEL'),
                                  (VCF_SYNONYMOUS_VARIANT, 'syn')]
 
     for consequence, cons_label in variant_types_to_test:
@@ -3891,8 +3369,7 @@ def compute_variant_stats(fgr_vcfdata=None,
                                          consequence,
                                          cons_label=cons_label,
                                          use_allele_counts=use_allele_counts,
-                                         gene_sets=gene_sets)  # ,
-#                                          alternative='two-sided' if consequence == VCF_SYNONYMOUS_VARIANT else 'greater')
+                                         gene_sets=gene_sets)
 
         result = merge_results(result, cur_result)
 
@@ -3904,8 +3381,7 @@ def compute_combined_pvalues(compute_variant_stats_result, COLUMNS_TO_COMBINE=No
     result = compute_variant_stats_result
 
     if COLUMNS_TO_COMBINE is None:
-        COLUMNS_TO_COMBINE= [#'primateAI|missense_variant|',
-                              'missense|',
+        COLUMNS_TO_COMBINE= ['missense|',
                               'all_PTV|']
 
     echo('Computing combined p-values for:', COLUMNS_TO_COMBINE)
@@ -3936,78 +3412,6 @@ def compute_combined_pvalues(compute_variant_stats_result, COLUMNS_TO_COMBINE=No
     result = result.sort_values(by=[combined_label + '|combined_pvalue', combined_label + '|combined_OR'], ascending=[True, False])
 
     return result
-
-
-# def _compare_to_gwas(summary_stats, test_label, gwas_snps, finemapped_gene_column='eQTL_gene_name'):
-#     EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN = 'EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN'
-#     GWAS_OR = 'OR'
-#     GWAS_ID = 'ID'
-#     GWAS_PVALUE = 'P-VALUE'
-#
-#     if finemapped_gene_column == 'eQTL_gene_name':
-#         gwas_snps = gwas_snps[gwas_snps['eQTL_total_eQTLs'] == 1]
-#         cols_to_slice = [finemapped_gene_column,
-#                          GWAS_ID,
-#                          GWAS_PVALUE,
-#                          'eQTL_tissues',
-#                          'eQTL_max_effect_size',
-#                          GWAS_OR,
-#
-#                          EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN]
-#     else:
-#         cols_to_slice = [finemapped_gene_column,
-#                          GWAS_ID,
-#                          'CHROM',
-#                          'pos',
-#                          'REF',
-#                          'ALT',
-#                          'pics2_Linked_SNP',
-#                          'pics2_Linked_RefAlt',
-#                          'pics2_Linked_position',
-#                          GWAS_OR,
-#                          GWAS_PVALUE,
-#                          EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN]
-#
-#     res = pd.merge(gwas_snps[cols_to_slice].rename(columns={'CHROM': 'INDEX_CHROM',
-#                                                             'pos': 'INDEX_POS',
-#                                                             'REF': 'INDEX_REF',
-#                                                             'ALT': 'INDEX_ALT',
-#                                                             'OR': 'GWAS_OR',
-#                                                             'P-VALUE': 'GWAS_P-VALUE'}),
-#                    sort_variant_stats_by_test(summary_stats,
-#                                               pvalue_label=test_label + '|chi2_pvalue'),
-#
-#                    right_on=GENE_NAME,
-#                    left_on=finemapped_gene_column)
-#
-#     if 'pics2_Linked_position' in list(res):
-#         res['pics2_Linked_position'] = res['pics2_Linked_position'].str.replace('|', ':')
-#
-#     res['WIN'] = (((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '+') & (res[test_label + '|OR'] > 1)) |
-#                   ((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '-') & (res[test_label + '|OR'] < 1)))
-#
-#     cols = res.columns.tolist()
-#
-#     #     n_total = len(res)
-#
-#     n_pos = sum(res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '+')
-#     n_neg = sum(res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '-')
-#
-#     n_pos_wins = sum((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '+') & res['WIN'])
-#     n_neg_wins = sum((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '-') & res['WIN'])
-#
-#     p = sum(res[test_label + '|OR'] > 1) / len(res)
-#
-#     p_value = sum(sum(scipy.special.binom(n_pos, k) *
-#                       scipy.special.binom(n_neg, l) *
-#                       p ** (k + n_neg - l) *
-#                       (1 - p) ** (n_pos - k + l)
-#                       for l in range(n_neg_wins, n_neg + 1))
-#                   for k in range(n_pos_wins, n_pos + 1))
-#
-#     print (n_pos_wins + n_neg_wins, 'wins out of', n_pos + n_neg, 'P(OR>1)=', p, ', p-value=', p_value)
-#
-#     return res[cols[-1:] + cols[:-1]].drop([GENE_NAME], axis=1)
 
 
 def compare_to_gwas(summary_stats,
@@ -4045,8 +3449,6 @@ def compare_to_gwas(summary_stats,
                                               pvalue_label=test_label + '|chi2_pvalue'),
                    on=GENE_NAME)
 
-    # echo(len(res))
-
     res['WIN'] = (((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '+') & (res[test_label + '|OR'] > 1)) |
                   ((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '-') & (res[test_label + '|OR'] < 1)))
 
@@ -4058,7 +3460,6 @@ def compare_to_gwas(summary_stats,
     n_pos_wins = sum((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '+') & res['WIN'])
     n_neg_wins = sum((res[EXPECTED_RARE_VARIANTS_LOG_ODDS_RATIO_SIGN] == '-') & res['WIN'])
 
-    # p = sum(res[test_label + '|OR'] > 1) / len(res)
     p_pos = sum(summary_stats[test_label + '|OR'] > 1) / len(summary_stats)
 
     p_value = sum(sum(scipy.special.binom(n_pos, k) *
@@ -4081,12 +3482,10 @@ def compare_to_gwas(summary_stats,
 
     echo(n_pos_wins + n_neg_wins, 'wins out of', n_pos + n_neg, 'P(OR>1)=', p_pos, ', p-value=', p_value)
     echo('binomial p-value:', scipy.stats.binom_test(n_pos_wins + n_neg_wins, len(res), alternative='greater'))
-    # echo('pos p-value:', p_value_pos)
 
     res = res[[c for c in cols if c in list(gwas_snps) or c == 'WIN' or c.startswith(test_label)]]
 
     return res
-
 
 
 def sort_variant_stats_by_test(compute_variant_stats_result,
@@ -4111,7 +3510,6 @@ def sort_variant_stats_by_test(compute_variant_stats_result,
 
     if gene_names is not None:
         res = res[res[GENE_NAME].isin(gene_names)]
-        # res = res.sort_values(by=GENE_NAME)
 
     if min_synonymous_pvalue is not None:
         res = res[res['syn|chi2_pvalue'] >= min_synonymous_pvalue]
@@ -4133,12 +3531,8 @@ def qqplot(stats_object, pvalue_label, title_prefix=''):
     dataset_labels = sorted([col_label for col_label in list(stats_object) if col_label.startswith(test_label + '|n|')])
     if len(dataset_labels) == 0:
         dataset_labels = sorted([col_label for col_label in list(stats_object) if col_label.startswith(test_label + '|total')])
-    # print(dataset_labels, test_label)
 
     stats_object = stats_object[~stats_object[pvalue_label].isnull()]
-
-    # stats_object = stats_object[(stats_object[dataset_labels[0]] > 0) & (stats_object[dataset_labels[1]] > 0)]
-    # stats_object = stats_object[(stats_object[dataset_labels[0]] > 0) & (stats_object[dataset_labels[1]] > 0)]
 
     pvalues = [p for p in stats_object[pvalue_label] if not np.isnan(p)]
 
@@ -4176,12 +3570,7 @@ def qqplot(stats_object, pvalue_label, title_prefix=''):
     ax[2].set_xlabel('Log (' + test_label + '|OR)')
     ax[2].set_ylabel('# genes')
 
-    # bins = np.histogram(np.hstack((stats_object[dataset_labels[0]],
-    #                                stats_object[dataset_labels[1]])), bins=50)[1]
-
-    bins = list(range(25)) #+ [1000]
-
-    # ax[3].set_title(dataset_labels[0].split('|')[-1])
+    bins = list(range(25))
 
     if len(dataset_labels) == 2:
         ax[3].hist(stats_object[dataset_labels[0]], bins, log=True, alpha=0.3, label=dataset_labels[0].split('|')[-1].replace('_colstripped', ''))
@@ -4190,9 +3579,6 @@ def qqplot(stats_object, pvalue_label, title_prefix=''):
         ax[3].set_ylabel('# genes')
 
         ax[3].legend()
-
-    # ax[4].set_title(dataset_labels[1].split('|')[-1])
-    # ax[4].hist(stats_object[dataset_labels[1]], bins=50, log=True)
 
     for ax_idx in [0, 1]:
         axisMax = (max(max(log_expected), max(log_observed)) + 0.5) if ax_idx == 1 else 1
@@ -4219,8 +3605,6 @@ def qqplot1(stats_object, pvalue_label, title_prefix='', log_only=False, exclude
 
     pvalues = [p for p in stats_object[pvalue_label] if not np.isnan(p)]
 
-    # min_pvalue = min([p for p in pvalues if p > 0])
-
     observed = sorted([p if p > 1e-300 else 1e-300 for p in pvalues])
 
     expected = [(i + 1) / len(pvalues) for i in range(len(pvalues))]
@@ -4236,7 +3620,6 @@ def qqplot1(stats_object, pvalue_label, title_prefix='', log_only=False, exclude
         ax_max = max(max(log_observed), max(log_expected))
         ax.plot([0, ax_max], [0, ax_max], color='grey')
 
-        # fdr = statsmodels.stats.multitest.multipletests(observed, method='fdr_bh')[1]
         ax.set_xlabel('-log10 Expected')
         ax.set_ylabel('-log10 Observed')
 
@@ -4258,106 +3641,16 @@ def qqplot1(stats_object, pvalue_label, title_prefix='', log_only=False, exclude
         ax_max = max(max(log_observed), max(log_expected))
         ax[1].plot([0, ax_max], [0, ax_max], color='grey')
 
-        # fdr = statsmodels.stats.multitest.multipletests(observed, method='fdr_bh')[1]
         ax[1].set_xlabel('Expected')
         ax[1].set_ylabel('Observed')
 
         ax[1].set_title('Log QQ plot')
-    # ax[1].set_title("n_fdr_5prc=%d, n_fdr_1prc=%d, 0|1/2|1ord=%d|%d|%d" %
-    #                 (len([f for f in fdr if f <= 0.05]),
-    #                  len([f for f in fdr if f <= 0.01]),
-    #                  len([1 for o, e in zip(log_observed, log_expected) if o - e >= 0]),
-    #                  len([1 for o, e in zip(log_observed, log_expected) if o - e >= 0.5]),
-    #                  len([1 for o, e in zip(log_observed, log_expected) if o - e >= 1])
-    #                  ))
 
     if upper_limit is not None:
         ax[1].set_xlim((0, upper_limit))
         ax[1].set_ylim((0, upper_limit))
 
     plt.show()
-
-# In order to define dataset specific variants: subtract TCGA from gnomad and gnomad from TCGA
-
-def subtract_tcga_from_gnomad_and_vice_versa( tcga_meta,
-                                              tcga_sparse_data,
-                                              tcga_all,
-                                              gnomad_exomes_non_cancer_all,
-                                              nfe_gnomad_exomes_non_cancer_only):
-
-
-    # subtract gnomad non_cancer_all from TCGA
-
-    tcga_sample_info_all = tcga_meta.get_sample_info(sample_ids=list(tcga_sparse_data[GENOTYPE_SDF]))
-    tcga_sample_info_europeans = tcga_sample_info_all[tcga_sample_info_all['race'] == 'white']
-
-    tcga_all_AC1 = filter_variants(tcga_all, max_AC=1, chromosomes_to_exclude=['X', 'Y'])
-
-    tcga_all_europeans_info, tcga_all_europeans_info_genotypes = subset_tcga_variants(tcga_sparse_data,
-                                                                                 tcga_sample_info_europeans[
-                                                                                     TCGA_SAMPLE_ID])
-
-    tcga_all_AC1_europeans_info = pd.merge(tcga_all_AC1.info,
-                                           tcga_all_europeans_info[[VCF_CHROM, VCF_POS, VCF_REF, VCF_ALT]],
-                                           how='inner',
-                                           on=[VCF_CHROM, VCF_POS, VCF_REF, VCF_ALT])
-
-    tcga_all_AC1_europeans_annotation = pd.merge(tcga_all_AC1.annotation,
-                                                 tcga_all_AC1_europeans_info[[VARIANT_IDX]],
-                                                 how='inner',
-                                                 on=VARIANT_IDX)
-
-    #     tcga_all_AC1_europeans = VcfData(info=tcga_all_AC1_europeans_info,
-    #                                      annotation=tcga_all_AC1_europeans_annotation)
-
-    # tcga_all_AC1_europeans_minus_gnomad_info = tcga_all_AC1_europeans_info[pd.merge(tcga_all_AC1_europeans_info,
-    #                                                                                 gnomad_exomes_non_cancer_all.info,
-    #                                                                                 on=(VCF_CHROM, VCF_POS, VCF_REF,
-    #                                                                                     VCF_ALT),
-    #                                                                                 how='left',
-    #                                                                                 indicator=True)[
-    #                                                                            '_merge'] == 'left_only']
-
-
-    tcga_all_AC1_europeans_minus_gnomad_info = subtract_dataframes(tcga_all_AC1_europeans_info,
-                                                                   gnomad_exomes_non_cancer_all.info,
-                                                                   [VCF_CHROM, VCF_POS, VCF_REF, VCF_ALT])
-
-
-    tcga_all_AC1_europeans_minus_gnomad_annotation = pd.merge(tcga_all_AC1_europeans_annotation,
-                                                              tcga_all_AC1_europeans_minus_gnomad_info,
-                                                              on=VARIANT_IDX,
-                                                              how='inner')[list(tcga_all_AC1_europeans_annotation)]
-
-    tcga_all_AC1_europeans_minus_gnomad = VcfData(info=tcga_all_AC1_europeans_minus_gnomad_info,
-                                                  annotation=tcga_all_AC1_europeans_minus_gnomad_annotation)
-
-    # subtract TCGA from gnomad non_cancer_only
-
-    # nfe_gnomad_exomes_non_cancer_only_minus_tcga_info = nfe_gnomad_exomes_non_cancer_only.info[
-    #     pd.merge(nfe_gnomad_exomes_non_cancer_only.info,
-    #              tcga_all.info,
-    #              on=(VCF_CHROM, VCF_POS, VCF_REF, VCF_ALT),
-    #              how='left',
-    #              indicator=True)['_merge'] == 'left_only']
-
-
-    nfe_gnomad_exomes_non_cancer_only_minus_tcga_info = subtract_dataframes(nfe_gnomad_exomes_non_cancer_only.info,
-                                                                            tcga_all.info,
-                                                                            [VCF_CHROM, VCF_POS, VCF_REF, VCF_ALT])
-
-
-    nfe_gnomad_exomes_non_cancer_only_minus_tcga_annotation = pd.merge(nfe_gnomad_exomes_non_cancer_only.annotation,
-                                                                       nfe_gnomad_exomes_non_cancer_only_minus_tcga_info,
-                                                                       on=VARIANT_IDX,
-                                                                       how='inner')[
-        list(nfe_gnomad_exomes_non_cancer_only.annotation)]
-
-    nfe_gnomad_exomes_non_cancer_only_minus_tcga = VcfData(info=nfe_gnomad_exomes_non_cancer_only_minus_tcga_info,
-                                                           annotation=nfe_gnomad_exomes_non_cancer_only_minus_tcga_annotation)
-
-    return tcga_all_AC1_europeans_minus_gnomad, nfe_gnomad_exomes_non_cancer_only_minus_tcga
-
 
 def subtract_dataframes(from_dataframe, to_subtract, columns_for_join):
     res = pd.merge(from_dataframe,
@@ -4446,13 +3739,8 @@ def test_ranks(ranks,
             for i in range(len(random_ranks)):
                 if random_ranks[i] <= ranks[i]:
                     n_false_pos_array[i] += 1
-        #                 else:
-        #                     break
 
         pvalues = [fp / N_PERM for fp in n_false_pos_array]
-
-    #         echo(ranks)
-    #         echo(pvalues)
 
     else:
 
@@ -4478,7 +3766,6 @@ def test_ranks(ranks,
                                     )
                         for rho, r in enumerate(ranks)]
 
-    # echo(ranks, n_all, n_ranks, pvalues)
     non_zero_pvalues = [p for p in pvalues if p > 0]
     if len(non_zero_pvalues) > 0:
         min_p = min(non_zero_pvalues)
@@ -4493,7 +3780,6 @@ def test_ranks(ranks,
     best_n_variants, best_pval = min_max_index(pvalues)
 
     if verbose:
-        # echo('p-values:', pvalues)
         plt.figure()
         plt.plot(-np.log10(pvalues))
         plt.ylabel('-log10 P-value')
@@ -4515,7 +3801,6 @@ def test_ranks(ranks,
 
 def get_effective_number_of_dimensions(df):
     echo('[get_effective_number_of_dimensions]')
-    # df = df.subtract(df.mean())
 
     df = pd.DataFrame(scipy.stats.zscore(df, axis=0), columns=df.columns)
 
@@ -4611,7 +3896,6 @@ def clump(snps,
     if clump_by_zscores:
         sorted_snps = snps.copy()
 
-        # echo('Sorting by:', '__sort_by' + pvalue_label)
         sorted_snps['__sort_by' + pvalue_label] = np.abs(sorted_snps[pvalue_label])
         sorted_snps = sorted_snps.sort_values('__sort_by' + pvalue_label, ascending=False)
 
@@ -4651,32 +3935,6 @@ def clump(snps,
                 result[c].append(row[c])
 
     return pd.DataFrame(result)
-
-
-def vcorrcoef_old(X, y):
-    """Correlates rows of X with y"""
-    np_array_type = type(np.array([]))
-    if type(X) is not np_array_type:
-        X = np.array(X)
-
-    if type(y) is not np_array_type:
-        y = np.array(y)
-
-    Xm = np.reshape(np.mean(X, axis=1), (X.shape[0], 1))
-    ym = np.mean(y)
-
-    r_num = np.sum((X - Xm) * (y - ym), axis=1)
-    r_den = np.sqrt(np.sum((X - Xm) ** 2, axis=1) * np.sum((y - ym) ** 2))
-
-    r = r_num / r_den
-
-    n = len(y)
-
-    ab = n / 2 - 1
-
-    prob = 2 * scipy.special.btdtr(ab, ab, 0.5 * (1 - abs(np.float64(r))))
-
-    return r, prob
 
 
 def vcorrcoef(X, Y=None, axis='columns', return_single_df=False, index_label=None):
@@ -4764,8 +4022,6 @@ def multiproc_wrapper(func):
                 traceback.print_exc(file=open_log.logfile)
 
             traceback.print_exc()
-
-            # print
 
             raise e
 
@@ -4924,11 +4180,6 @@ def get_variant_sample_ids_from_vcf(fname, variants, sample_ids=None,
 
     echo(np.sum(np.sum(res, axis=1) == 0), 'missing variants')
     return res
-
-# gt = get_variant_genotypes(tb, annotated_gtex_variants.info.head(), sample_ids=sample_ids)
-# gt = get_variant_genotypes(gtex_fname, variants, sample_ids=sample_ids, replace_missing=True)
-# echo(gt.shape)
-# gt.head()
 
 
 def get_prs_params(prs_fname):
