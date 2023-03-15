@@ -56,7 +56,7 @@ setup(name="rvPRS",
     entry_points={'console_scripts': [
         'rvPRS = rvPRS.rare.bin.rare_prs:main',
         ]},
-    license='MIT',
+    license='GPLv3',
     install_requires=[
         'scipy',
         'numpy',
