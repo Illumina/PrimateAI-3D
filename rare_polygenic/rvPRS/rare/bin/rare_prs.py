@@ -34,7 +34,7 @@ def get_options():
     parser.add_argument('--test-samples',
         help='path to list of test samples to generate polygenic scores for. ' \
             'This must be disjoint from the training samples.')
-    parser.add_argument('--ancestry-samples', action='append',
+    parser.add_argument('--ancestry-samples', nargs='+',
         help='path to list of samples for checking variant allele frequencies. ' \
             'This should be used multiple times to check in multiple ancestries.')
     parser.add_argument('--exome-db', 
