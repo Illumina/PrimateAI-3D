@@ -29,8 +29,8 @@ def cds_overlap(tx1, tx2, window=50):
     cull any true hits in the small checks I did.
     
     Args:
-        tx1: denovonear.Transcript object, with get_cds() method
-        tx2: denovonear.Transcript object, with get_cds() method
+        tx1: gencodegenes.Transcript object, with get_cds() method
+        tx2: gencodegenes.Transcript object, with get_cds() method
         window: distance to expand CDS regions by
     
     Returns:
