@@ -21,6 +21,7 @@ training_ancestry1=$datafolder/samples.train_ancestry1.txt.gz
 testing_ancestry1=$datafolder/samples.test_ancestry1.txt.gz
 
 # result paths
+common_results=$datafolder/results.gwas.db
 burden_results=$datafolder/results.burden_test.txt.gz
 prs_results=$datafolder/results.prs_values.txt.gz
 prs_model=$datafolder/results.prs_model.json
@@ -41,6 +42,15 @@ python $datafolder/make_synthetic_datasets.py \
 # intersect training/testing groups with the primary ancestry group
 zcat $training_path $datafolder/samples.ancestry1.txt.gz | sort -h | uniq -d | gzip > $training_ancestry1
 zcat $testing_path $datafolder/samples.ancestry1.txt.gz | sort -h | uniq -d | gzip > $testing_ancestry1
+
+################################################################################
+# run common variant tests
+################################################################################
+python $datafolder/common.py \
+    --bgen $bgen_path \
+    --pheno-db $phenotype_path \
+    --trait-name $trait_name \
+    --output $common_results
 
 ################################################################################
 # run burden testing, not included in this folder
