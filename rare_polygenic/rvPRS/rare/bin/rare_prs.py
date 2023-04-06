@@ -504,6 +504,7 @@ def main():
 
     gencode = Gencode(args.gencode)
     genes = open_rare_variant_results(args.rare_results, gencode, args.max_p)
+    genes = list(genes)
 
     if args.restrict_to:
         gene_subset = open_gene_subset(args.restrict_to)
@@ -515,10 +516,10 @@ def main():
                                pheno_db=args.pheno_db,
                                trait=args.trait,
                                train_samples=train_samples,
-                               gwas_db=args.gwas_path,
+                               gwas_db=args.gwas_db,
                                model_path=args.output_model,
                                version='v2')
-    write_output(risk_scores, len(genes), args.output_metadata, args.output)
+    write_output(risk_scores, len(genes), args.include_metadata, args.output)
 
 if __name__ == "__main__":
     main()
