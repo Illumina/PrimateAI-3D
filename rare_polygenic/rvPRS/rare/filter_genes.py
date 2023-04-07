@@ -18,7 +18,7 @@ def is_coding(gencode, symbol):
         gencode: gencodegenes object for all genes in gencode
         symbol: HGNC symbol for gene
     '''
-    return gencode[symbol].canonical.get_type() == 'protein_coding'
+    return gencode[symbol].canonical.type == 'protein_coding'
 
 def cds_overlap(tx1, tx2, window=50):
     ''' check if the CDS regions of two transcripts overlap
@@ -36,8 +36,8 @@ def cds_overlap(tx1, tx2, window=50):
     Returns:
         true/false for whether any of the CDS regions overlap between transcripts
     '''
-    tx1_cds = [(x['start'] - window, x['end'] + window) for x in tx1.get_cds()]
-    tx2_cds = [(x['start'] - window, x['end'] + window) for x in tx2.get_cds()]
+    tx1_cds = [(x['start'] - window, x['end'] + window) for x in tx1.cds]
+    tx2_cds = [(x['start'] - window, x['end'] + window) for x in tx2.cds]
     for start1, end1 in tx1_cds:
         for start2, end2 in tx2_cds:
             if end1 >= start2 and end2 >= start1:
