@@ -138,9 +138,9 @@ def get_gene_coords(gencode, symbol):
     ''' get the chrom, pos (middle of gene) and transcript start site for gene
     '''
     tx = gencode[symbol].canonical
-    chrom = tx.get_chrom()
-    mid_pos = (tx.get_start() + tx.get_end()) // 2
-    tss_pos = tx.get_cds_start() if tx.get_strand() == '+' else tx.get_cds_end()
+    chrom = tx.chrom
+    mid_pos = (tx.start + tx.end) // 2
+    tss_pos = tx.cds_start if tx.strand == '+' else tx.end
     return {'chrom': chrom, 'pos': mid_pos, 'tss_pos': tss_pos}
 
 def annotate_coords(genes, gencode):
