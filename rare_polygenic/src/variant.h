@@ -51,9 +51,9 @@ public:
                                     _hash = std::hash<std::string>{}(varid);
                                   };
 
-  std::vector<std::int32_t> missing() { return from_bytes(_missing); }
-  std::vector<std::int32_t> homs() { return from_bytes(_homs); }
-  std::vector<std::int32_t> hets() { return from_bytes(_hets); }
+  std::vector<std::int32_t> missing() { return from_bytes_cpp(_missing); }
+  std::vector<std::int32_t> homs() { return from_bytes_cpp(_homs); }
+  std::vector<std::int32_t> hets() { return from_bytes_cpp(_hets); }
   std::vector<std::int32_t> all_samples()
   {
     std::vector<std::int32_t> samples = homs();
@@ -81,7 +81,7 @@ public:
                         combined.begin(), combined.end(),
                         std::inserter(remainder, remainder.begin()));
 
-    _homs = to_bytes(remainder);
+    _homs = to_bytes_cpp(remainder);
     ac = _hets.size() + 2 * _homs.size();
     af = (double)ac / (double)an;
   }

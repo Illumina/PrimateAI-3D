@@ -5,15 +5,8 @@ from libcpp.vector cimport vector
 from libc.stdint cimport int32_t
 
 cdef extern from 'convert_ids.h' namespace 'rvPRS':
-    vector[int32_t] from_bytes(string& byte_ids)
-    string to_bytes(vector[int32_t]& ids)
-
-def from_bytes_cython(byte_ids):
-    ''' convert byte IDs to list of numeric IDs
-    '''
-    if byte_ids is None:
-        return []
-    return from_bytes(byte_ids)
+    vector[int32_t] from_bytes_cpp(string& byte_ids)
+    string to_bytes_cpp(vector[int32_t]& ids)
 
 def to_bytes(nums, length=3):
     ''' convert numbers to sequence of 3-byte encoded values
@@ -31,13 +24,8 @@ def to_bytes(nums, length=3):
     The byte-sequences can be decoded to lists of ints with from_bytes().
     '''
     if length == 3:
-        return to_bytes_cython(nums)
+        return to_bytes_cpp(nums)
     return b''.join(x.to_bytes(length, 'little', signed=True) for x in nums)
-
-def to_bytes_cython(vector[int32_t] ids):
-    ''' convert byte IDs to list of numeric IDs, see
-    '''
-    return to_bytes(ids)
 
 def from_bytes(byte_ids, bit_len=3):
     ''' convert byte sequence to list of ints from 24-bit encoded values
@@ -46,7 +34,7 @@ def from_bytes(byte_ids, bit_len=3):
     \xe8\x03\x00 is 3-byte encoded 1000, and \xd0\x07\x00 is 3-byte encoded 2000
     '''
     if bit_len == 3:
-        return from_bytes_cython(byte_ids)
+        return from_bytes_cpp(byte_ids)
     
     length = len(byte_ids)
     return [int.from_bytes(byte_ids[i:i+bit_len], byteorder='little', signed=True) for i in range(0, length, bit_len)]

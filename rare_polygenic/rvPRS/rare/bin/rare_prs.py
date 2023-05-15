@@ -34,7 +34,7 @@ def get_options():
     parser.add_argument('--test-samples',
         help='path to list of test samples to generate polygenic scores for. ' \
             'This must be disjoint from the training samples.')
-    parser.add_argument('--ancestry-samples', action='append',
+    parser.add_argument('--ancestry-samples', nargs='+',
         help='path to list of samples for checking variant allele frequencies. ' \
             'This should be used multiple times to check in multiple ancestries.')
     parser.add_argument('--exome-db', 
@@ -138,9 +138,9 @@ def get_gene_coords(gencode, symbol):
     ''' get the chrom, pos (middle of gene) and transcript start site for gene
     '''
     tx = gencode[symbol].canonical
-    chrom = tx.get_chrom()
-    mid_pos = (tx.get_start() + tx.get_end()) // 2
-    tss_pos = tx.get_cds_start() if tx.get_strand() == '+' else tx.get_cds_end()
+    chrom = tx.chrom
+    mid_pos = (tx.start + tx.end) // 2
+    tss_pos = tx.cds_start if tx.strand == '+' else tx.end
     return {'chrom': chrom, 'pos': mid_pos, 'tss_pos': tss_pos}
 
 def annotate_coords(genes, gencode):
@@ -504,6 +504,7 @@ def main():
 
     gencode = Gencode(args.gencode)
     genes = open_rare_variant_results(args.rare_results, gencode, args.max_p)
+    genes = list(genes)
 
     if args.restrict_to:
         gene_subset = open_gene_subset(args.restrict_to)
@@ -515,10 +516,10 @@ def main():
                                pheno_db=args.pheno_db,
                                trait=args.trait,
                                train_samples=train_samples,
-                               gwas_db=args.gwas_path,
+                               gwas_db=args.gwas_db,
                                model_path=args.output_model,
                                version='v2')
-    write_output(risk_scores, len(genes), args.output_metadata, args.output)
+    write_output(risk_scores, len(genes), args.include_metadata, args.output)
 
 if __name__ == "__main__":
     main()

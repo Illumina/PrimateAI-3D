@@ -7,8 +7,8 @@
 
 namespace rvPRS {
 
-std::vector<std::int32_t> from_bytes(std::string & bytes);
-std::string to_bytes(std::vector<std::int32_t> &ids);
+std::vector<std::int32_t> from_bytes_cpp(std::string & bytes);
+std::string to_bytes_cpp(std::vector<std::int32_t> &ids);
 
 } // namespace
 

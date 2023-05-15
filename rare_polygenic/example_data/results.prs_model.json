@@ -1,0 +1,26 @@
+{
+    "GENE3": {
+        "ac_threshold": 20.0,
+        "primateai_threshold": 0.000702055411694864,
+        "af_effect": -0.011581378057599068,
+        "pathogenicity_effect": -0.050113942474126816,
+        "intercept": 0.9514629244804382,
+        "gene_beta": 0.4580266721863539
+    },
+    "GENE5": {
+        "ac_threshold": 9.0,
+        "primateai_threshold": 0.11618972276920833,
+        "af_effect": 0.0,
+        "pathogenicity_effect": 0.0,
+        "intercept": 0.0,
+        "gene_beta": 0.48952557571849564
+    },
+    "GENE7": {
+        "ac_threshold": 14.0,
+        "primateai_threshold": 0.038820478616864794,
+        "af_effect": -0.11128664016723633,
+        "pathogenicity_effect": -0.06374761462211609,
+        "intercept": 0.2582741677761078,
+        "gene_beta": 0.090107154866486
+    }
+}

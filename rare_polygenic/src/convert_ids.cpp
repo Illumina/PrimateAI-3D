@@ -5,7 +5,7 @@
 namespace rvPRS
 {
 
-std::vector<std::int32_t> from_bytes(std::string &bytes)
+std::vector<std::int32_t> from_bytes_cpp(std::string &bytes)
 {
     std::uint64_t length = bytes.size();
     std::vector<std::int32_t> ids(length / 3);
@@ -34,7 +34,7 @@ std::vector<std::int32_t> from_bytes(std::string &bytes)
 // storing the ints as comma-separated string of int values e.g. 
 // '1000000,2000000' takes 15 bytes as string, but only 6 bytes when converted 
 // to byte sequence.
-std::string to_bytes(std::vector<std::int32_t> &ids)
+std::string to_bytes_cpp(std::vector<std::int32_t> &ids)
 {
     std::string bytes;
     bytes.resize(ids.size() * 3);
