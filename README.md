@@ -10,3 +10,5 @@ This repository contains three subfolders:
  - rare_polygenic: code for rare variant polygenic scores
 
 
+To request academic or commercial license for PrimateAI-3D scores, please check the instructions at https://primad.basespace.illumina.com/license
+
