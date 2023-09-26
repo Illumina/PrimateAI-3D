@@ -3,6 +3,8 @@
 PrimateAI-3D scores and primate and human constraint are available at the PrimAD browser:  https://primad.basespace.illumina.com/
 
 
+Request access to full table of scores: primateAI_licensing@illumina.com
+
 
 This repository contains three subfolders:
  - primateAI-3D: code for the Primate-3D deep learning model
