@@ -1,4 +1,5 @@
-Overview
+OVERVIEW
+
 The inference of selection coefficients of all possible coding variants relies on both deep learning predicted pathogenicity (e.g., PrimateAI-3D) and forward time population simulation. The forward-time simulations of human population growth is conducted in order to estimate the expected depletion of rare variants for specific selection coefficients. 
 
 Simulation under neutral evolution
@@ -18,7 +19,7 @@ As the selective pressure against mutations rises, it is expected that variants 
 The depletion values are generated for each of the 36 selection coefficients to establish a selection-depletion curve, on which curve fitting and interpolation enables us to estimate the selection coefficient for any given depletion value.
 
 
-System Requirements
+SYSTEM REQUIREMENTS
 
 Hardware requirements
 
@@ -62,7 +63,7 @@ sudo apt-get install r-base r-base-dev
 which should install in about 20 seconds.
 
 
-Installation Guide:
+INSTALLATION GUIDE
 
 Install from Github
 
@@ -147,9 +148,9 @@ PrimateAI-3D predicted s_het scores are available with a non-commercial license 
 The s_het scores are also displayed on https://primad.basespace.illumina.com.
 
 
-Citation
+CITATION
 
 For usage of the package and associated manuscript, please cite according to the enclosed citation.bib.
 
-Contact
+CONTACT
 If you have any questions, please send an email to hgao@illumina.com.
