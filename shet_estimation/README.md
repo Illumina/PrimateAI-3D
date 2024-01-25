@@ -153,4 +153,9 @@ CITATION
 For usage of the package and associated manuscript, please cite according to the enclosed citation.bib.
 
 CONTACT
+
 If you have any questions, please send an email to hgao@illumina.com.
+
+RELEASE NOTE
+
+Current version of shet esimation for downloading is v1.0.
