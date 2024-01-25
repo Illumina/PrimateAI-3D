@@ -1,0 +1,22 @@
+
+These output files are partial ouputs from simulation scripts.
+
+Each row of output files from simulation_SFS_neutral.py or simulation_SFS_neutral_splitting5populations.py contains the following columns, delimited by space:
+
+The 1st column shows the value of T1.
+The 2nd column shows the value of Nefactor.
+The 3rd column shows the value of popratio.
+The 4th column indicates snptype.
+The 5th column indicates the index of output samples sampled from the simulated final population at present day.
+The 6th column indicates the index of locus among the 100,000 independent loci where a variant occurs.
+The 7th column indicates the allele count of the variant at the locus.
+
+Each row of output files from simulation_SFS_with_selection.py contains the following columns, delimited by space:
+
+The 1st column shows the value of selection coefficient.
+The 2nd column indicates snptype.
+The 3rd column indicates the index of output samples sampled from the simulated final population at present day.
+The 4th column indicates the index of locus among the 100,000 independent loci where a variant occurs.
+The 5th column indicates the allele count of the variant at the locus.
+The 6th column indicates the generation when the variant occurs.
+
