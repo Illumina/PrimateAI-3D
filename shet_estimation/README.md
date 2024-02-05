@@ -138,9 +138,9 @@ Copyright (c) 2024 Illumina, Inc. All rights reserved.
 
 This software is provided under the terms and conditions of the GNU GENERAL PUBLIC LICENSE Version 3.
 
-You should have received a copy of the GNU GENERAL PUBLIC LICENSE Version 3 along with this program. If not, see https://github.com/illumina/licenses/.
+You should have received a copy of the PolyForm Strict License 1.0.0 license along with this program. If not, see  https://polyformproject.org/licenses/strict/1.0.0/ 
 
-PrimateAI3D-based s_het estimation source code is provided under the GNU General Public license v3.0 (GPLv3) license. 
+PrimateAI3D-based s_het estimation source code is provided under the PolyForm Strict License 1.0.0 license. 
 The s_het estimation source code includes several third party packages provided under other open source licenses, please see COPYRIGHT.txt for additional details. 
 
 PrimateAI-3D predicted s_het scores are available with a non-commercial license upon request and other use requires a commercial license from Illumina, Inc.
