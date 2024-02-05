@@ -136,7 +136,7 @@ LICENSE
 
 Copyright (c) 2024 Illumina, Inc. All rights reserved.
 
-This software is provided under the terms and conditions of the GNU GENERAL PUBLIC LICENSE Version 3.
+This software is provided under the terms and conditions of the PolyForm Strict License 1.0.0 license.
 
 You should have received a copy of the PolyForm Strict License 1.0.0 license along with this program. If not, see  https://polyformproject.org/licenses/strict/1.0.0/ 
 
