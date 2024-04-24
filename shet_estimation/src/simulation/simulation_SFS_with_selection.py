@@ -1,17 +1,16 @@
 # Copyright 2024 Illumina Inc, San Diego, CA                                                                                                                                  
-#                                                                                                                                                                             
-#    This program is free software: you can redistribute it and/or modify                                                                                                     
-#    it under the terms of the GNU General Public License as published by                                                                                                     
-#    the Free Software Foundation, either version 3 of the License, or                                                                                                        
-#    (at your option) any later version.                                                                                                                                      
-#                                                                                                                                                                             
-#    This program is distributed in the hope that it will be useful,                                                                                                          
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                                                                           
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                                                                                                            
-#    GNU General Public License for more details.                                                                                                                             
-#                                                                                                                                                                             
-#    You should have received a copy of the GNU General Public License                                                                                                        
-#    along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0.txt                                                                                           
+#          
+# This program is licensed under the terms of the Polyform strict license
+#
+# ***As far as the law allows, the software comes as is, without
+# any warranty or condition, and the licensor will not be liable
+# to you for any damages arising out of these terms or the use
+# or nature of the software, under any kind of legal claim.***
+#
+# You should have received a copy of the PolyForm Strict License 1.0.0
+# along with this program.  If not, see <https://polyformproject.org/licenses/strict/1.0.0>.
+#
+#
 
 
 '''
