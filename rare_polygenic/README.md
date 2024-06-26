@@ -29,21 +29,16 @@ rvPRS \
 ```
 
 ### Arguments explained
- - RARE_RESULTS: path to rare variant results. This should be a tsv file with 11 
+ - RARE_RESULTS: path to rare variant results. This should be a tsv file with these 
     columns: 
     - symbol - HGNC symbol
     - consequence - 'del', syn' or 'ptv'
     - beta: average effect size for rare variants in gene
     - p_value: P-value from rare variant burden testing for the gene/consequence type
-    - fdr: FDR-corrected P-value (adjusted for number of tests conducted for the gene)
-    - n_carriers: number of rare variant carriers for the gene/consequence type
-    - n_variants: number of rare variant for the gene/consequence type
     - ac_threshold: maximum allele count threshold for including rare variants 
         (based on ukb450k release, this is the global AC)
-    - primate_ai_threshold: threshold for missense pathogenicity score (doesn't
+    - pathogenicity_threshold: threshold for missense pathogenicity score (doesn't
         have to be PrimateAI-3D)
-    - r_squared: variance explained by rare variants for gene/consequence type
-    - n_tests: number of tests conducted for the gene/consequence type.
  - EXOME_DB: path to sqlite db of exome genotypes. This needs three tables: 
     "variants", "annotations" and "samples". See `rvPRS.rare.exome.py` for
     further details.

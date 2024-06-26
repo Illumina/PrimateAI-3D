@@ -67,22 +67,15 @@ class Result:
     consequence: str
     beta: float
     p_value: float
-    fdr: float
-    n_carriers: float
-    n_variants: float
     ac_threshold: float
-    primate_ai_threshold: float
-    r_squared: float
-    n_tests: int
-    se: float = float('nan')
+    pathogenicity_threshold: float
     chrom: str = None
     pos: int = None
     tss_pos: int = None
     
     def __post_init__(self):
         # make sure the relevant attributes are floats
-        for field in ['beta', 'p_value', 'fdr', 'ac_threshold', 'primate_ai_threshold', 
-                      'se', 'n_variants', 'n_carriers']:
+        for field in ['beta', 'p_value', 'ac_threshold', 'pathogenicity_threshold']:
             setattr(self, field, float(getattr(self, field)))
     
     def __getitem__(self, key):
@@ -97,9 +90,17 @@ def get_lines(path):
     logging.info(f'opening rare variant results from {path}')
     opener = gzip.open if str(path).endswith('gz') else open
     with opener(path, 'rt') as handle:
-        header = handle.readline()
-        for x in handle:
-            yield Result(*(x.rstrip('\n').split('\t')))
+        header = handle.readline().strip('\n').split('\t')
+        header = {k :i for i, k in enumerate(header)}
+        for line in handle:
+            line = line.strip('\n').split('\t')
+            symbol = line[header['symbol']]
+            consequence = line[header['consequence']]
+            beta = line[header['beta']]
+            p_value = line[header['p_value']]
+            ac_threshold = line[header['ac_threshold']]
+            pathogenicity_threshold = line[header['pathogenicity_threshold']]
+            yield Result(symbol, consequence, beta, p_value, ac_threshold, pathogenicity_threshold)
 
 def group_by_gene(results):
     ''' group result lines by gene (come sorted in results file)
@@ -116,22 +117,6 @@ def filter_by_p_value(genes, threshold=1, cq='del'):
     '''
     for gene in genes:
         if gene[cq].p_value <= threshold:
-            yield gene
-
-def filter_by_effect_size(genes, cq='del', min_p_threshold=1e-10, max_effect_size=1):
-    ''' filter out genes with marginal P-values,but extreme effect sizes
-    '''
-    for gene in genes:
-        # only keep genes with low P-values, or low effect sizes
-        if gene[cq].p_value <= min_p_threshold or abs(gene[cq].beta) < max_effect_size:
-            yield gene
-
-def filter_by_variant_count(genes, cq='del', min_variants=71):
-    ''' filter out genes with marginal P-values,but extreme effect sizes
-    '''
-    for gene in genes:
-        # only keep genes with low P-values, or low effect sizes
-        if gene[cq].n_variants >= min_variants:
             yield gene
 
 def get_gene_coords(gencode, symbol):
@@ -196,7 +181,7 @@ def save_model(gene_models, model_path):
             pathogenicity = 0
         models[gene['del'].symbol] = { 
             'ac_threshold': gene['del'].ac_threshold, 
-            'primateai_threshold': gene['del'].primate_ai_threshold, 
+            'pathogenicity_threshold': gene['del'].pathogenicity_threshold,
             'af_effect': float(model.beta[model.labels.index('af')]),
             'pathogenicity_effect': pathogenicity,
             'intercept': float(model.beta[model.labels.index('intercept')]),
@@ -220,7 +205,7 @@ def select_variants(conn, gene, cq_type, score_type, max_af, exome_samples):
     variants = get_rare_variants(conn, gene[cq_type].symbol, score_type, max_af, exome_samples)
     # variants = filter_by_ac(variants, gene[cq_type].ac_threshold)
     by_cq = group_by_consequence(variants)
-    return (v for v in by_cq[cq_type] if v.primateai >= gene[cq_type].primate_ai_threshold)
+    return (v for v in by_cq[cq_type] if v.primateai >= gene[cq_type].pathogenicity_threshold)
 
 def get_ac_and_an(variant, samples):
     ''' get alternate allele count for variant within a set of samples
@@ -301,7 +286,7 @@ def get_rare_prs_v1(include_samples, rare_genes, exome_db_path, ancestries,
     Args:
         include_samples: set of samples used for the PRS
         rare_genes: list of dicts, each with 'symbol', 'p_value', 'beta', 
-                    'ac_threshold' and 'primate_ai_threshold' fields
+                    'ac_threshold' and 'pathogenicity_threshold' fields
         exome_db_path: path to exome database
         cq_type: variant type, one of ['del', 'syn' or 'ptv']
         score_type: name of column for missense pathogenicity
@@ -332,7 +317,7 @@ def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries,
     Args:
         include_samples: set of samples used for the PRS
         rare_genes: list of dicts, each with 'symbol', 'p_value', 'beta', 
-                    'ac_threshold' and 'primate_ai_threshold' fields
+                    'ac_threshold' and 'pathogenicity_threshold' fields
         exome_db_path: path to exome database
         pheno_db: path to phenotype database
         trait: name of phenotype to use from phenotype db
@@ -386,7 +371,7 @@ def get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries,
     Args:
         include_samples: set of samples used for the PRS
         rare_genes: list of dicts, each with 'symbol', 'p_value', 'beta', 
-                    'ac_threshold' and 'primate_ai_threshold' fields
+                    'ac_threshold' and 'pathogenicity_threshold' fields
         exome_db_path: path to exome database
         pheno_db: path to phenotype database
         trait: name of phenotype to use from phenotype db
@@ -447,7 +432,7 @@ def get_rare_prs(include_samples, rare_genes, exome_db_path, ancestries,
     Args:
         include_samples: set of samples used for the PRS
         rare_genes: list of dicts, each with 'symbol', 'p_value', 'beta', 
-                    'ac_threshold' and 'primate_ai_threshold' fields
+                    'ac_threshold' and 'pathogenicity_threshold' fields
         exome_db_path: path to exome database
         cq_type: variant type, one of ['del', 'syn' or 'ptv']
         score_type: name of column for missense pathogenicity

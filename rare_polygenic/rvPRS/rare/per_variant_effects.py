@@ -139,7 +139,7 @@ def get_trait_data(phenotype, gene, conn, score_col, var_type, exome_samples):
     variants = filter_by_ac(variants, gene['ac_threshold'])
     by_cq = group_by_consequence(variants)
     
-    above_threshold = [x for x in by_cq[var_type] if x.primateai >= gene.primate_ai_threshold]
+    above_threshold = [x for x in by_cq[var_type] if x.primateai >= gene.pathogenicity_threshold]
     
     table = []
     for sample, var in get_max_values_for_carriers(above_threshold).items():
@@ -165,7 +165,7 @@ def fit_gene(phenotype, gene, conn, score_col, var_type, exome_samples):
     Args:
         phenotype: dict of sample ID to phenotype value for samples to include in model
         genes: iterable of genes significant for rare variant test. Each gene has
-            symbol, ac_threshold, primate_ai_threshold attributes
+            symbol, ac_threshold, pathogenicity_threshold attributes
         conn: connection to sqlite3 database with exome data
     
     Returns:
@@ -193,7 +193,7 @@ def fit_genes(phenotype, genes, conn, score_col, var_type, exome_samples, model=
     Args:
         phenotype: dict of sample ID to phenotype value for samples to include in model
         genes: iterable of genes significant for rare variant test. Each gene has
-            symbol, ac_threshold, primate_ai_threshold attributes
+            symbol, ac_threshold, pathogenicity_threshold attributes
         conn: connection to sqlite3 database with exome data
     
     Returns:
