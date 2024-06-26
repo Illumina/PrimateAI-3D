@@ -27,11 +27,11 @@ def get_max_values_for_carriers(variants):
         var_af = var.af
         if var_af > 0.5:
             var_af = 1 - var_af
-        tmpvar = TempVar(var.chrom, var.pos, var.ref, var.alt, var_af, var.primateai)
+        tmpvar = TempVar(var.chrom, var.pos, var.ref, var.alt, var_af, var.missense_pathogenicity)
         for sample in var.all_samples:
             if sample not in samples:
                 samples[sample] = tmpvar
-            if var.primateai > samples[sample].pathogenicity:
+            if var.missense_pathogenicity > samples[sample].pathogenicity:
                 samples[sample] = tmpvar
     return samples
 
@@ -139,7 +139,7 @@ def get_trait_data(phenotype, gene, conn, score_col, var_type, exome_samples):
     variants = filter_by_ac(variants, gene['ac_threshold'])
     by_cq = group_by_consequence(variants)
     
-    above_threshold = [x for x in by_cq[var_type] if x.primateai >= gene.pathogenicity_threshold]
+    above_threshold = [x for x in by_cq[var_type] if x.missense_pathogenicity >= gene.pathogenicity_threshold]
     
     table = []
     for sample, var in get_max_values_for_carriers(above_threshold).items():

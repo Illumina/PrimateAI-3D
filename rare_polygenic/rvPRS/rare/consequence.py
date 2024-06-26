@@ -22,16 +22,16 @@ def group_by_consequence(variants, spliceai_threshold=0.2):
     cqs = {'syn': set(), 'del': set(), 'ptv': set()}
     for var in variants:
         if var.consequence in PTV:
-            var.primateai = 1.0
+            var.missense_pathogenicity = 1.0
             cqs['ptv'].add(var)
             cqs['del'].add(var)
-        elif var.consequence in MISSENSE and var.primateai is not None:
+        elif var.consequence in MISSENSE and var.missense_pathogenicity is not None:
             cqs['del'].add(var)
         elif var.spliceai is not None and var.spliceai > spliceai_threshold:
-            var.primateai = 1.0
+            var.missense_pathogenicity = 1.0
             cqs['ptv'].add(var)
             cqs['del'].add(var)
         elif var.consequence in SYNONYMOUS:
-            var['primateai'] = 0.0
+            var['missense_pathogenicity'] = 0.0
             cqs['syn'].add(var)
     return cqs

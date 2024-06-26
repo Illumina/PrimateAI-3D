@@ -65,11 +65,11 @@ cdef class Variant:
     def consequence(self):
         return self.thisptr.consequence.decode('utf8')
     @property
-    def primateai(self):
+    def missense_pathogenicity(self):
         tmp = self.thisptr.missense_pathogenicity
         return None if isnan(tmp) else float(tmp)
-    @primateai.setter
-    def primateai(self, value):
+    @missense_pathogenicity.setter
+    def missense_pathogenicity(self, value):
         self.thisptr.missense_pathogenicity = value
     @property
     def spliceai(self):

@@ -1,7 +1,7 @@
 {
     "GENE3": {
         "ac_threshold": 20.0,
-        "primateai_threshold": 0.000702055411694864,
+        "pathogenicity_threshold": 0.000702055411694864,
         "af_effect": -0.011581378057599068,
         "pathogenicity_effect": -0.050113942474126816,
         "intercept": 0.9514629244804382,
@@ -9,7 +9,7 @@
     },
     "GENE5": {
         "ac_threshold": 9.0,
-        "primateai_threshold": 0.11618972276920833,
+        "pathogenicity_threshold": 0.11618972276920833,
         "af_effect": 0.0,
         "pathogenicity_effect": 0.0,
         "intercept": 0.0,
@@ -17,7 +17,7 @@
     },
     "GENE7": {
         "ac_threshold": 14.0,
-        "primateai_threshold": 0.038820478616864794,
+        "pathogenicity_threshold": 0.038820478616864794,
         "af_effect": -0.11128664016723633,
         "pathogenicity_effect": -0.06374761462211609,
         "intercept": 0.2582741677761078,

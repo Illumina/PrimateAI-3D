@@ -205,7 +205,7 @@ def select_variants(conn, gene, cq_type, score_type, max_af, exome_samples):
     variants = get_rare_variants(conn, gene[cq_type].symbol, score_type, max_af, exome_samples)
     # variants = filter_by_ac(variants, gene[cq_type].ac_threshold)
     by_cq = group_by_consequence(variants)
-    return (v for v in by_cq[cq_type] if v.primateai >= gene[cq_type].pathogenicity_threshold)
+    return (v for v in by_cq[cq_type] if v.missense_pathogenicity >= gene[cq_type].pathogenicity_threshold)
 
 def get_ac_and_an(variant, samples):
     ''' get alternate allele count for variant within a set of samples
