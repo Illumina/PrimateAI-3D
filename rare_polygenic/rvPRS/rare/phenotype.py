@@ -11,10 +11,10 @@ def open_file(path, sep='\t'):
     ''' open a csv/tsv file and return header dict plus file handle
     '''
     opener = gzip.open if str(path).endswith('gz') else open
-    with opener(path, 'rt') as handle:
-        header = handle.readline().strip('\n').split(sep)
-        indices = {k: i for i, k in enumerate(header)}
-        return indices, handle
+    handle = opener(path, 'rt')
+    header = handle.readline().strip('\n').split(sep)
+    indices = {k: i for i, k in enumerate(header)}
+    return indices, handle
 
 def get_phenotypes(path: Path, column: str, samples=None) -> Iterable[Tuple[str, str]]:
     ''' get values for one phenotype from phenotype database
