@@ -27,7 +27,7 @@ from rvPRS.rare.per_variant_effects import (fit_gene, fit_genes,
 def get_options():
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('--train-samples',
+    parser.add_argument('--train-samples', required=True,
         help='path to list of training samples used during burden testing. ' \
             'This is required as we have to remodel per-variant effects in the ' \
             'same subset.')
@@ -37,22 +37,22 @@ def get_options():
     parser.add_argument('--ancestry-samples', nargs='+',
         help='path to list of samples for checking variant allele frequencies. ' \
             'This should be used multiple times to check in multiple ancestries.')
-    parser.add_argument('--exome-db', 
+    parser.add_argument('--exome-db', required=True,
         help='path to sqlite db of exome genotypes')
-    parser.add_argument('--pheno-db', 
-        help='path to sqlite db of phenotypes')
-    parser.add_argument('--trait', 
-        help='name of trait to check (for selecting from phenotype db)')
+    parser.add_argument('--phenotype', required=True,
+                        help='path/s to files containing phenotypes to test')
+    parser.add_argument('--phenotype-column', required=True, default='value_irnt',
+                        help='name of column to use for phenotype values')
     parser.add_argument('--gwas-db', 
-        help='path to sqlite db of GWAS results, for optionally regressing out ' \
+        help='optional path to sqlite db of GWAS results, for regressing out ' \
              'common variant effects')
-    parser.add_argument('--gencode', 
+    parser.add_argument('--gencode', required=True,
         help='path to GENCODE GTF annotations file')
     parser.add_argument('--max-p', default=0.01, type=float,
         help='maximum allowed P-value for inclusion')
     parser.add_argument('--restrict-to', 
         help='Optional path for restricting the PRS to a subset of genes.')
-    parser.add_argument('--rare-results')
+    parser.add_argument('--rare-results', required=True)
     parser.add_argument('--score-type')
     parser.add_argument('--include-metadata', 
                         help='additional info that can be placed in output files')
@@ -309,7 +309,7 @@ def get_rare_prs_v1(include_samples, rare_genes, exome_db_path, ancestries,
     return risk_scores
 
 def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries, 
-        pheno_db, trait, train_samples, model_path=None, cq_type='del', 
+        pheno_path, pheno_column, train_samples, model_path=None, cq_type='del', 
         score_type='primateai_v2', max_af=0.001, weights=None, 
         use_external_af=False, gwas_db=None):
     ''' calculate rare polygenic risk scores with per-variant effects
@@ -319,8 +319,8 @@ def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries,
         rare_genes: list of dicts, each with 'symbol', 'p_value', 'beta', 
                     'ac_threshold' and 'pathogenicity_threshold' fields
         exome_db_path: path to exome database
-        pheno_db: path to phenotype database
-        trait: name of phenotype to use from phenotype db
+        pheno_path: path to phenotype file
+        pheno_column: name of phenotype column to use from phenotype file
         train_samples: set of samples for training per-variant effects
         model_path: if included, will save per-variant and per-gene model 
             parameters to this path as json output.
@@ -330,7 +330,7 @@ def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries,
     with sqlite3.connect(exome_db_path) as conn:
         exome_samples = set(map(int, get_exome_samples(conn)))
     
-    phenotype = get_phenotypes(pheno_db, trait)
+    phenotype = get_phenotypes(pheno_path, pheno_column)
     phenotype = ((k, v) for k, v in phenotype if int(k) in exome_samples and int(k) in train_samples)
     phenotype = ((k, v) for k, v in phenotype if v is not None)
     if gwas_db:
@@ -363,7 +363,7 @@ def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries,
     return risk_scores
 
 def get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries, 
-        pheno_db, trait, train_samples, model_path=None, cq_type='del', 
+        pheno_path, pheno_column, train_samples, model_path=None, cq_type='del', 
         score_type='primateai_v2', max_af=0.001, weights=None, 
         use_external_af=False, gwas_db=None, model='linreg'):
     ''' calculate rare polygenic risk scores with jointly modelled per-variant effects
@@ -373,8 +373,8 @@ def get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries,
         rare_genes: list of dicts, each with 'symbol', 'p_value', 'beta', 
                     'ac_threshold' and 'pathogenicity_threshold' fields
         exome_db_path: path to exome database
-        pheno_db: path to phenotype database
-        trait: name of phenotype to use from phenotype db
+        pheno_path: path to phenotype file
+        pheno_column: name of phenotype column to use from phenotype file
         train_samples: set of samples for training per-variant effects
         model_path: if included, will save per-variant and per-gene model 
             parameters to this path as json output.
@@ -384,7 +384,7 @@ def get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries,
     with sqlite3.connect(exome_db_path) as conn:
         exome_samples = set(map(int, get_exome_samples(conn)))
     
-    phenotype = get_phenotypes(pheno_db, trait)
+    phenotype = get_phenotypes(pheno_path, pheno_column)
     phenotype = ((k, v) for k, v in phenotype if int(k) in exome_samples and int(k) in train_samples)
     phenotype = ((k, v) for k, v in phenotype if v is not None)
     if gwas_db:
@@ -424,8 +424,8 @@ def get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries,
     return risk_scores
 
 def get_rare_prs(include_samples, rare_genes, exome_db_path, ancestries, 
-        cq_type='del', score_type='primateai_v2', max_af=0.001, pheno_db=None, 
-        trait=None, train_samples=None, model_path=None, weights=None, 
+        cq_type='del', score_type='primateai_v2', max_af=0.001, pheno_path=None, 
+        pheno_column=None, train_samples=None, model_path=None, weights=None, 
         use_external_af=False, gwas_db=None, version='v2', **kwargs):
     ''' calculate rare polygenic risk scores for samples with exomic genotypes
     
@@ -436,22 +436,26 @@ def get_rare_prs(include_samples, rare_genes, exome_db_path, ancestries,
         exome_db_path: path to exome database
         cq_type: variant type, one of ['del', 'syn' or 'ptv']
         score_type: name of column for missense pathogenicity
-        pheno_db: path to phenotype database
-        trait: name of trait column in phenotype database
+        pheno_path: path to phenotype file
+        pheno_column: name of phenotype column to use from phenotype file
     '''
-    # if the pheno_db, trait, and train_samples are passed in, we want the
+    # if the pheno_db, pheno_column, and train_samples are passed in, we want the
     # per-variant PRS model, which uses get_rare_prs_v2 instead of get_rare_prs_v1
-    if pheno_db is None and trait is None and train_samples is None:
-        return get_rare_prs_v1(include_samples, rare_genes, exome_db_path, ancestries, 
-            cq_type, score_type, max_af, weights, use_external_af)
+    if pheno_path is None and pheno_column is None and train_samples is None:
+        return get_rare_prs_v1(include_samples, rare_genes, exome_db_path, 
+                               ancestries,  cq_type, score_type, max_af, weights, 
+                               use_external_af)
     elif version == 'v2':
-        return get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries, 
-            pheno_db, trait, train_samples, model_path, cq_type, score_type, 
-            max_af, weights, use_external_af, gwas_db)
+        return get_rare_prs_v2(include_samples, rare_genes, exome_db_path, 
+                               ancestries, pheno_path, pheno_column, 
+                               train_samples, model_path, cq_type, score_type,
+                               max_af, weights, use_external_af, gwas_db)
     elif version == 'v3':
-        return get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries, 
-            pheno_db, trait, train_samples, model_path, cq_type, score_type, 
-            max_af, weights, use_external_af, gwas_db, **kwargs)
+        return get_rare_prs_v3(include_samples, rare_genes, exome_db_path, 
+                               ancestries, pheno_path, pheno_column, 
+                               train_samples, model_path, cq_type, score_type, 
+                               max_af, weights, use_external_af, gwas_db, 
+                               **kwargs)
 
 def write_output(risk, n_genes, metadata, path):
     logging.info(f'writing risk scores to {path}')
@@ -498,8 +502,8 @@ def main():
     risk_scores = get_rare_prs(test_samples, genes, args.exome_db, ancestries, 
                                cq_type='del',
                                score_type=args.score_type, 
-                               pheno_db=args.pheno_db,
-                               trait=args.trait,
+                               pheno_path=args.phenotype,
+                               pheno_col=args.phenotype_column,
                                train_samples=train_samples,
                                gwas_db=args.gwas_db,
                                model_path=args.output_model,
