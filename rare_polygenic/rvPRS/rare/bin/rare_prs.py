@@ -15,7 +15,7 @@ from fisher import pvalue as fisher_exact
 from gencodegenes import Gencode
 
 from rvPRS.rare.consequence import group_by_consequence
-from rvPRS.prs_comparisons import open_test_samples
+from rvPRS.prs_comparisons import open_sample_subset
 from rvPRS.rare.exome import get_exome_samples
 from rvPRS.rare.filter_variants import get_rare_variants
 from rvPRS.rare.filter_genes import filter_by_gencode
@@ -480,14 +480,14 @@ def main():
     logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(message)s', level=logging.INFO)
     args = get_options()
 
-    train_samples = open_test_samples(args.train_samples)
-    test_samples = open_test_samples(args.test_samples)
+    train_samples = set(int(x) for x in open_sample_subset(args.train_samples))
+    test_samples = set(int(x) for x in open_sample_subset(args.test_samples))
 
     ensure_no_subset_overlap(train_samples, test_samples)
     
     ancestries = {}
     for i, path in enumerate(args.ancestry_samples):
-        samples = open_test_samples(path)
+        samples = set(int(x) for x in open_sample_subset(path))
         ensure_no_subset_overlap(samples, test_samples)
         ancestries[i] = samples
 
