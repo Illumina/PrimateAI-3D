@@ -44,8 +44,9 @@ rvPRS \
     further details.
  - SCORE_TYPE: name of missense pathogenicity score. Needs to be a valid column 
     in the annotations table of the exome database.
- - PHENO_DB: path to sqlite db of phenotypes. See `rvPRS.rare.phenotype.py` for 
+ - PHENO: path to tsv/csv file of phenotypes. See `rvPRS.rare.phenotype.py` for 
     further details.
+ - TRAIT: name of trait to check (for selecting from phenotype file)
  - TRAIN_SAMPLES: path to list of IDs for samples used during burden testing. This 
     is required as we have to remodel per-variant effects in the same subset.
  - TEST_SAMPLES: path to list of test samples to generate polygenic scores for. 
@@ -53,7 +54,6 @@ rvPRS \
  - ANCESTRY_SAMPLES: path to list of samples for checking variant allele
     frequencies. This can (and should!) be used multiple times to check in 
     multiple ancestries.
- - TRAIT: name of trait to check (for selecting from phenotype db)
  - GWAS_DB: path to sqlite db of GWAS results, for optionally regressing out 
     common variant effects. See `rvPRS.common.db.py` for further details.
  - GENCODE: path to GENCODE GTF annotations file (e.g. https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/gencode.v43.annotation.gtf.gz)
