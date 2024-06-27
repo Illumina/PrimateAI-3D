@@ -1,44 +1,52 @@
-''' function to get phenotype data from sqlite db for rare variant analysis
+''' function to load phenotype data for rare variant analysis
 '''
 
+import gzip
 import logging
-import sqlite3
+import math
+from pathlib import Path
+from typing import Iterable, Tuple
 
-def get_phenotypes(db_path, column, samples=None):
+def open_file(path, sep='\t'):
+    ''' open a csv/tsv file and return header dict plus file handle
+    '''
+    opener = gzip.open if str(path).endswith('gz') else open
+    with opener(path, 'rt') as handle:
+        header = handle.readline().strip('\n').split(sep)
+        indices = {k: i for i, k in enumerate(header)}
+        return indices, handle
+
+def get_phenotypes(path: Path, column: str, samples=None) -> Iterable[Tuple[str, str]]:
     ''' get values for one phenotype from phenotype database
     
     Args:
-        db_path: path to sqlite3 database containing phenotype info
-        column: name of phenotype to get e.g. 'Standing_height.all_ethnicities.both.original.RAW'
+        path: path to file containing phenotype info
+        column: name of phenotype column to use e.g. 'Standing_height.all_ethnicities.both.original.RAW'
         samples: optional list of samples to restrict to. Uses all samples if not set
     
     Yields:
         tuples of (sample_id, value). 
     '''
-    logging.info(f'getting {column} from phenotype database')
-    if samples is not None:
-        samples = set(samples)
-    make_query = lambda col: f'''SELECT value from "{col}"'''
-    with sqlite3.connect(db_path) as conn:
-        all_samples = conn.execute(make_query('sample_id'))
-        for k, v in zip(all_samples, conn.execute(make_query(column))):
-            if samples is None or k[0] in samples:
-                yield k[0], v[0]
-    conn.close()
-
-def get_covariates(db_path, covariates, samples=None):
-    ''' get covariate columns from covariate database
-    '''
-    logging.info(f'getting {covariates} from phenotype database')
+    logging.info(f'loading phenotypes from {path} via {column}')
     if samples is not None:
         samples = set(samples)
     
-    if isinstance(covariates, str):
-        covariates = [covariates]
-    covariates = [f'"{x}"' for x in covariates]
+    indices, handle = open_file(path)
+    sample_col = indices['sample_id']
+    value_col = indices[column]
     
-    make_query = lambda col: f'''SELECT sample_id,{",".join(covariates)} from covariates'''
-    with sqlite3.connect(db_path) as conn:
-        for x in conn.execute(make_query(covariates)):
-            if samples is None or x[0] in samples:
-                yield x
+    for line in handle:
+        line = line.strip('\n').split('\t')
+        sample_id = line[sample_col]
+        value = line[value_col]
+        
+        try:
+            value = float(value)
+        except ValueError:
+            continue
+        
+        if math.isnan(value):
+            continue
+        
+        if samples is None or sample_id in samples:
+            yield sample_id, value

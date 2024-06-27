@@ -19,7 +19,7 @@ def get_options():
     parser.add_argument('--exome-genotypes', required=True,
                         help='path to sqlite3 db file to write synthetic exome variants to')
     parser.add_argument('--phenotypes', required=True,
-                        help='path to sqlite3 db file to write phenotypes to')
+                        help='path to file to write phenotypes to')
     parser.add_argument('--training', required=True,
                         help='path to write training samples to')
     parser.add_argument('--testing', required=True,
@@ -81,14 +81,11 @@ def dosage_to_probs(arr: numpy.array):
     probs[arr == 2, 2] = 1  # set homozygous alts
     return probs
 
-def create_pheno_db(db_path: str, sample_ids: numpy.array, phenotype: numpy.array, pheno_name: str):
-    with sqlite3.connect(db_path) as conn:
-        conn.execute('''CREATE TABLE "sample_id" (value text, UNIQUE(value))''')
-        for x in sample_ids:
-            conn.execute('INSERT INTO "sample_id" VALUES (?)', (x, ))
-        conn.execute(f'''CREATE TABLE "{pheno_name}" (value real)''')
-        for x in phenotype:
-            conn.execute(f'INSERT INTO "{pheno_name}" VALUES (?)', (float(x), ))
+def create_phenotype_file(path: str, sample_ids: numpy.array, phenotype: numpy.array, pheno_name: str):
+    with gzip.open(path, 'wt') as output:
+        output.write(f'sample_id\t{pheno_name}\n')
+        for sample_id, pheno in zip(sample_ids, phenotype):
+            output.write(f'{sample_id}\t{pheno}\n')
 
 def simulate_array_genotypes(bgen_path: str, sample_ids: numpy.array, n_variants: int, pheno: numpy.array):
     ''' construct a bgen file with simulated genotypes
@@ -332,7 +329,7 @@ def main():
     sample_ids = simulate_sample_ids(args.cohort_size)
     pheno_vals = simulate_phenotype(args.cohort_size)
 
-    create_pheno_db(args.phenotypes, sample_ids, pheno_vals, args.pheno_name)
+    create_phenotype_file(args.phenotypes, sample_ids, pheno_vals, args.pheno_name)
     simulate_array_genotypes(args.array_genotypes, sample_ids, args.n_array_variants, pheno_vals)
     n_genes = simulate_exome_genotypes(args.exome_genotypes, sample_ids, args.n_exome_variants, pheno_vals)
     prepare_training_splits(sample_ids, args.training, args.testing)
