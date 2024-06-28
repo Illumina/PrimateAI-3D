@@ -298,7 +298,7 @@ class prune_by_ancestry_af:
             # get the AF threshold for the gene in the sample subset from the
             # variants which pass the AC threshold
             self.variants = [v for v in variants if v.ac <= ac_thresh]
-            self.af_thresh = af_thresholf(self.variants, sample_ids)
+            self.af_thresh = af_threshold(self.variants, sample_ids)
             self.ac_thresh = ac_threshold(self.variants, sample_ids)
         elif af_thresh is not None:
             # the alternative scenario, when we have pre-determined thr correct
