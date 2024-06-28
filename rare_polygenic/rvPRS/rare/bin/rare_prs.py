@@ -25,7 +25,7 @@ from rvPRS.rare.filter_genes import filter_by_gencode
 from rvPRS.rare.phenotype import get_phenotypes
 from rvPRS.rare.regress_out_common import regress_out_common_variants
 from rvPRS.rare.per_variant_effects import (fit_gene, fit_genes,
-    freq_model_predict, get_max_values_for_carriers)
+    freq_model_predict, get_max_values_for_carriers, MockFit)
 
 def get_options():
     parser = argparse.ArgumentParser(description='compute rare variant PRS')
@@ -268,13 +268,18 @@ class prune_by_ancestry_af:
                  ac_thresh: int=None,
                  af_thresh: float=None):
         '''
-        
         Args:
             variants: list of rare variants (filtered on max_af e.g. 0.001)
             sample_ids: set of sample IDs from either a training set, or from
                 some independent group we want to generate a rare PRS for
             ancestries: sets of sample IDs for different ancestry groups, indexed
                 by ancestry label
+            ac_thresh: allele count threshold to filter for variants for rarity.
+                We use this to determine the corresponding allele frequency
+                threshold in the set of samples provided by "sample_ids".
+            af_threshold: allele frequency threshold for filtering variants by
+                rarity. Previously established by this function with the 
+                "ac_thresh" argument.
         '''
         if ac_thresh is None and af_thresh is None:
             raise ValueError('must pass in either ac_thresh or af_thresh')
@@ -296,6 +301,9 @@ class prune_by_ancestry_af:
             self.af_thresh = af_thresholf(self.variants, sample_ids)
             self.ac_thresh = ac_threshold(self.variants, sample_ids)
         elif af_thresh is not None:
+            # the alternative scenario, when we have pre-determined thr correct
+            # AF threshold, so filter to those variants onle, then establish the 
+            # AC threshold from those
             self.variants = [v for v in self.variants if get_af(v, sample_ids) <= af_thresh]
             self.ac_thresh = ac_threshold(self.variants, sample_ids)
         
@@ -328,7 +336,7 @@ class prune_by_ancestry_af:
                 yield variant
 
 def get_rare_prs_v1(include_samples, rare_genes, exome_db_path, ancestries, 
-        cq_type='del', score_type='primateai_v2', max_af=0.001, weights=None):
+        cq_type='del', score_type='primateai_v2', max_af=0.001):
     ''' calculate rare polygenic risk scores with same effect for each variant
     
     Args:
@@ -347,19 +355,17 @@ def get_rare_prs_v1(include_samples, rare_genes, exome_db_path, ancestries,
     for gene in sorted(rare_genes, key=lambda x: float(x[cq_type].p_value)):
         if math.isnan(gene[cq_type].p_value):
             continue
-        weight = 1 if weights is None else weights[gene[cq_type].symbol]
         variants = select_variants(conn, gene, cq_type, score_type, max_af * 10, exome_samples)
         variants = prune_by_ancestry_af(variants, exome_samples, ancestries, ac_threshold=gene[cq_type].ac_threshold)
         for sample in set(x for v in variants for x in v.all_samples):
             if sample in risk_scores:
-                risk_scores[sample] += gene[cq_type].beta * weight
+                risk_scores[sample] += gene[cq_type].beta
     
     return risk_scores
 
 def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries, 
         pheno_path, pheno_col, train_samples, model_path=None, cq_type='del', 
-        score_type='primateai_v2', max_af=0.001, weights=None, 
-        gwas_db=None):
+        score_type='primateai_v2', max_af=0.001, gwas_db=None):
     ''' calculate rare polygenic risk scores with per-variant effects
     
     Args:
@@ -395,14 +401,12 @@ def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries,
         variants = prune_by_ancestry_af(variants, train_samples, ancestries, gene[cq_type].ac_threshold)
         gene[cq_type].af_threshold = variants.af_thresh
         
-        weight = 1 if weights is None else weights[gene[cq_type].symbol]
-        
         model = fit_gene(phenotype, gene[cq_type], conn, score_type, cq_type, exome_samples)
         models.append((gene, model))
         carriers = get_max_values_for_carriers(variants)
         for sample, var in carriers.items():
             if sample in risk_scores:
-                risk_scores[sample] += freq_model_predict(model, var) * weight
+                risk_scores[sample] += freq_model_predict(model, var)
     
     risk_scores = {int(k): float(v) for k, v in risk_scores.items()}
     
@@ -413,7 +417,7 @@ def get_rare_prs_v2(include_samples, rare_genes, exome_db_path, ancestries,
 
 def get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries, 
         pheno_path, pheno_col, train_samples, model_path=None, cq_type='del', 
-        score_type='primateai_v2', max_af=0.001, weights=None, 
+        score_type='primateai_v2', max_af=0.001, 
         gwas_db=None, model='linreg'):
     ''' calculate rare polygenic risk scores with jointly modelled per-variant effects
     
@@ -465,17 +469,15 @@ def get_rare_prs_v3(include_samples, rare_genes, exome_db_path, ancestries,
             
         col += 2
     
-    weights = [weights[x.symbol] if weights is not None else 1 for x in genes]
-    weights = numpy.array([y for x in zip(weights, weights) for y in x])
-    scores = (model.beta[-1] + arr * model.beta[:-1] * weights).sum(axis=1)
+    scores = (model.beta[-1] + arr * model.beta[:-1]).sum(axis=1)
     risk_scores = dict(zip(include_samples, map(float, scores)))
     
     return risk_scores
 
 def get_rare_prs(include_samples, rare_genes, exome_db_path, ancestries, 
         cq_type='del', score_type='primateai_v2', max_af=0.001, pheno_path=None, 
-        pheno_col=None, train_samples=None, model_path=None, weights=None, 
-        gwas_db=None, version='v2', **kwargs):
+        pheno_col=None, train_samples=None, model_path=None, gwas_db=None, 
+        version='v2', **kwargs):
     ''' calculate rare polygenic risk scores for samples with exomic genotypes
     
     Args:
@@ -492,23 +494,21 @@ def get_rare_prs(include_samples, rare_genes, exome_db_path, ancestries,
     # per-variant PRS model, which uses get_rare_prs_v2 instead of get_rare_prs_v1
     if pheno_path is None and pheno_col is None and train_samples is None:
         return get_rare_prs_v1(include_samples, rare_genes, exome_db_path, 
-                               ancestries,  cq_type, score_type, max_af, weights)
+                               ancestries,  cq_type, score_type, max_af)
     elif version == 'v2':
         return get_rare_prs_v2(include_samples, rare_genes, exome_db_path, 
                                ancestries, pheno_path, pheno_col, 
                                train_samples, model_path, cq_type, score_type,
-                               max_af, weights, gwas_db)
+                               max_af, gwas_db)
     elif version == 'v3':
         return get_rare_prs_v3(include_samples, rare_genes, exome_db_path, 
                                ancestries, pheno_path, pheno_col, 
                                train_samples, model_path, cq_type, score_type, 
-                               max_af, weights, gwas_db, 
-                               **kwargs)
-
+                               max_af, gwas_db, **kwargs)
 
 def get_rare_prs_pretrained(model_path: Path, 
                             exome_db_path: Path, 
-                            include_samples: Set[int], 
+                            samples: Set[int], 
                             score_type: str,
                             ancestries: Dict[str, Set[int]]):
     ''' compute rare variant PRS using pretrained model
@@ -516,17 +516,34 @@ def get_rare_prs_pretrained(model_path: Path,
     model = json.load(open(model_path))
     conn = sqlite3.connect(exome_db_path)
     
-    cq_type = 'del'
-    for symbol, data in model.items():
-        gene = Result(symbol, 'del', data['gene_beta'], 1e-7, data['ac_threshold'], 
-               data['pathogenicity_threshold'], af_threshold=data['af_threshold'])
-        gene = {cq_type: gene}
-        variants = select_variants(conn, gene, cq_type, score_type, data['af_threshold'], include_samples)
-        
-        variants = prune_by_ancestry_af(variants, include_samples, ancestries, 
-                                        af_threshold=data['af_threshold'])
+    fit = MockFit(['intercept', 'af', 'pathogenicity'])
+    fit.log10cols = ['af']
     
-    raise NotImplementedError
+    cq_type = 'del'
+    risk_scores = {k: 0 for k in samples}
+    for symbol, data in model.items():
+        gene = {cq_type: Result(symbol, 'del', data['gene_beta'], 1e-7, 
+                                data['ac_threshold'], 
+                                data['pathogenicity_threshold'], 
+                                af_threshold=data['af_threshold'])}
+        # find rare variants with pathogenicity above the gene threshold
+        variants = select_variants(conn, gene, cq_type, score_type, 
+                                   data['af_threshold'], samples)
+        variants = prune_by_ancestry_af(variants, samples, ancestries, 
+                                        af_threshold=data['af_threshold'])
+        
+        # swap the variant AF field to the value for the sample subset
+        for variant in variants:
+            variant.af = get_af(variant, samples)
+        
+        fit.beta = [data['intercept'], data['af_effect'], data['pathogenicity_effect']]
+        
+        carriers = get_max_values_for_carriers(variants)
+        for sample, var in carriers.items():
+            if sample in risk_scores:
+                risk_scores[sample] += freq_model_predict(fit, var)
+    
+    return risk_scores
 
 def write_output(risk, n_genes, metadata, path):
     logging.info(f'writing risk scores to {path}')
@@ -551,23 +568,23 @@ def main():
     logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(message)s', level=logging.INFO)
     args = get_options()
     
-    print(args)
-    
     test_samples = set()
     if args.test_samples is not None:
         test_samples = set(int(x) for x in open_sample_subset(args.test_samples))
     
+    print(test_samples)
+    
     ancestries = {}
-    for i, path in enumerate(args.ancestry_samples):
-        samples = set(int(x) for x in open_sample_subset(path))
-        ensure_no_subset_overlap(samples, test_samples)
-        ancestries[i] = samples
+    if args.ancestry_samples is not None:
+        for i, path in enumerate(args.ancestry_samples):
+            samples = set(int(x) for x in open_sample_subset(path))
+            ensure_no_subset_overlap(samples, test_samples)
+            ancestries[i] = samples
     
     if hasattr(args, 'train_samples'):
         train_samples = set(int(x) for x in open_sample_subset(args.train_samples))
         ensure_no_subset_overlap(train_samples, test_samples)
         
-
         gencode = Gencode(args.gencode)
         genes = open_rare_variant_results(args.rare_results, gencode, args.max_p)
         genes = list(genes)
@@ -587,7 +604,7 @@ def main():
                                 version='v2')
     else:
         risk_scores = get_rare_prs_pretrained(args.rare_model, args.exome_db, 
-                                              args.score_type, test_samples, ancestries)
+                                              test_samples, args.score_type, ancestries)
     
     if args.output is not None:
         write_output(risk_scores, len(genes), args.include_metadata, args.output)
