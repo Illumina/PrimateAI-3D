@@ -304,7 +304,7 @@ class prune_by_ancestry_af:
             # the alternative scenario, when we have pre-determined thr correct
             # AF threshold, so filter to those variants onle, then establish the 
             # AC threshold from those
-            self.variants = [v for v in self.variants if get_af(v, sample_ids) <= af_thresh]
+            self.variants = [v for v in variants if get_af(v, sample_ids) <= af_thresh]
             self.ac_thresh = ac_threshold(self.variants, sample_ids)
         
         self.sample_ids = sample_ids
@@ -517,12 +517,16 @@ def get_rare_prs_pretrained(model_path: Path,
     model = json.load(open(model_path))
     conn = sqlite3.connect(exome_db_path)
     
-    fit = MockFit(['intercept', 'af', 'pathogenicity'])
-    fit.log10cols = ['af']
+    labels = ['intercept', 'af', 'pathogenicity']
+    fit = MockFit(labels)
+    fit.log10_cols = ['af']
+    fit.labels = labels
     
     cq_type = 'del'
     risk_scores = {k: 0 for k in samples}
     for symbol, data in model.items():
+        # print(fit.labels)
+        # print(fit.betas)
         gene = {cq_type: Result(symbol, 'del', data['gene_beta'], 1e-7, 
                                 data['ac_threshold'], 
                                 data['pathogenicity_threshold'], 
