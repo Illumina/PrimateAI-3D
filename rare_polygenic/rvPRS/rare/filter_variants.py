@@ -1,9 +1,16 @@
 
 import logging
+import sqlite3
+from typing import Iterable, Set
 
-from rvPRS.rare.exome import variants_for_gene, get_exome_samples
+from rvPRS.rare.exome import variants_for_gene
+from rvPRS.rare.variant import Variant
 
-def get_rare_variants(conn, symbol, score_type='primateai_v2', max_af=0.001, exome_samples=None):
+def get_rare_variants(conn: sqlite3.Connection, 
+                      symbol: str, 
+                      score_type='primateai_v2',
+                      max_af=0.001, 
+                      exome_samples=None) -> Iterable[Variant]:
     ''' find the rare variants for a gene
     
     Args:
@@ -27,26 +34,26 @@ def get_rare_variants(conn, symbol, score_type='primateai_v2', max_af=0.001, exo
     
     return variants
 
-def filter_by_af(variants, threshold=0.001, field='af'):
+def filter_by_af(variants: Iterable[Variant], threshold=0.001, field='af') -> Iterable[Variant]:
     ''' remove common variants
     '''
     logging.debug(f'removing variants with AF > {threshold}')
     return (x for x in variants if (x[field] is None or x[field] <= threshold) or (x[field] >= (1 - threshold)))
 
-def filter_by_missingness(variants, size, threshold=0.05):
+def filter_by_missingness(variants: Iterable[Variant], size, threshold=0.05) -> Iterable[Variant]:
     ''' remove variants with many missing samples
     '''
     logging.debug(f'removing variants with missingness > {threshold}')
     min_an = (1 - threshold) * size
     return (x for x in variants if x.an >= min_an)
 
-def filter_by_ac(variants, threshold):
+def filter_by_ac(variants: Iterable[Variant], threshold: int) -> Iterable[Variant]:
     ''' remove variants with high allele counts
     '''
     logging.debug(f'removing variants with AC > {threshold}')
     return (x for x in variants if x.ac <= threshold)
 
-def flip_high_af_variants(variants, sample_ids):
+def flip_high_af_variants(variants: Iterable[Variant], sample_ids: Set[int]) -> Iterable[Variant]:
     ''' swaps alleles for variants where the alternate allele frequency is >0.5
     
     variants with af > 0.5 require a bit of time to adjust sample IDs, so should 
