@@ -530,7 +530,7 @@ def get_rare_prs_pretrained(model_path: Path,
         variants = select_variants(conn, gene, cq_type, score_type, 
                                    data['af_threshold'], samples)
         variants = prune_by_ancestry_af(variants, samples, ancestries, 
-                                        af_threshold=data['af_threshold'])
+                                        af_thresh=data['af_threshold'])
         
         # swap the variant AF field to the value for the sample subset
         for variant in variants:
