@@ -41,6 +41,8 @@ def get_options():
         help='path to list of samples for checking variant allele frequencies. ' \
             'This should be used multiple times to check in multiple ancestries.')
     parent.add_argument('--score-type')
+    parent.add_argument('--include-metadata',
+                        help='additional info that can be placed in output files')
     parent.add_argument('--output')
     
     # add options for using a pretrained model
@@ -73,8 +75,6 @@ def get_options():
     group.add_argument('--restrict-to', 
         help='Optional path for restricting the PRS to a subset of genes.')
     group.add_argument('--rare-results', required=True)
-    group.add_argument('--include-metadata', 
-                        help='additional info that can be placed in output files')
     group.add_argument('--output-model')
     
     return parser.parse_args()
@@ -544,9 +544,9 @@ def get_rare_prs_pretrained(model_path: Path,
             if sample in risk_scores:
                 risk_scores[sample] += freq_model_predict(fit, var)
     
-    return risk_scores
+    return risk_scores, model
 
-def write_output(risk, n_genes, metadata, path):
+def write_output(risk: Dict[int, float], n_genes: int, metadata, path: Path):
     logging.info(f'writing risk scores to {path}')
     with gzip.open(path, 'wt') as output:
         if metadata is None:
@@ -602,7 +602,7 @@ def main():
                                 model_path=args.output_model,
                                 version='v2')
     else:
-        risk_scores = get_rare_prs_pretrained(args.rare_model, args.exome_db, 
+        risk_scores, genes = get_rare_prs_pretrained(args.rare_model, args.exome_db, 
                                               test_samples, args.score_type, ancestries)
     
     if args.output is not None:
