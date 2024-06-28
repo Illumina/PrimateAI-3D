@@ -513,6 +513,7 @@ def get_rare_prs_pretrained(model_path: Path,
                             ancestries: Dict[str, Set[int]]):
     ''' compute rare variant PRS using pretrained model
     '''
+    logging.info(f'opening pretrained rvPRS model from {model_path}')
     model = json.load(open(model_path))
     conn = sqlite3.connect(exome_db_path)
     
