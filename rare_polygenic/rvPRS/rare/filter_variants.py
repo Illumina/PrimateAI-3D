@@ -11,15 +11,12 @@ def get_rare_variants(conn, symbol, score_type='primateai_v2', max_af=0.001, exo
         symbol: HGNC symbol for gene
         score_type: name of column for missense pathogenicity score
         max_af: max permitted allele frequency
+        exome_samples: set of sample IDs, used for flipping high AF variants 
+            and computing max AN
     
     Returns:
         variants which meet the criteria
     '''
-    if exome_samples is None and not hasattr(get_rare_variants, 'exome_samples'):
-        get_rare_variants.exome_samples = sorted(set(int(x) for x in get_exome_samples(conn)))
-    if hasattr(get_rare_variants, 'exome_samples'):
-        exome_samples = get_rare_variants.exome_samples
-    
     max_AN = len(exome_samples) * 2
     logging.info(f'{symbol}')
     variants = variants_for_gene(conn, symbol, score_col=score_type, max_af=max_af)
