@@ -1,4 +1,8 @@
 
+from typing import Dict, Iterable, Set
+
+from rvPRS.rare.variant import Variant
+
 PTV = set([
     'frameshift_variant', 
     'stop_gained', 
@@ -16,7 +20,7 @@ SYNONYMOUS = set([
     'synonymous_variant',
 ])
 
-def group_by_consequence(variants, spliceai_threshold=0.2):
+def group_by_consequence(variants: Iterable[Variant], spliceai_threshold=0.2) -> Dict[str, Set[Variant]]:
     ''' group variants by consequence type
     '''
     cqs = {'syn': set(), 'del': set(), 'ptv': set()}

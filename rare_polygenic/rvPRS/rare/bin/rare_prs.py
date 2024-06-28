@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 import sqlite3
 import sys
-from typing import Dict, Iterator, Set
+from typing import Dict, Iterable, Set
 
 import numpy
 from fisher import pvalue as fisher_exact
@@ -103,7 +103,7 @@ class Result:
         # assign chrom, pos and tss_pos after result line is loaded from disk
         setattr(self, key, value)
 
-def get_lines(path: Path) -> Iterator[Result]:
+def get_lines(path: Path) -> Iterable[Result]:
     ''' get rare variant result rows
     '''
     logging.info(f'opening rare variant results from {path}')
@@ -121,13 +121,13 @@ def get_lines(path: Path) -> Iterator[Result]:
             pathogenicity_threshold = line[header['pathogenicity_threshold']]
             yield Result(symbol, consequence, beta, p_value, ac_threshold, pathogenicity_threshold)
 
-def group_by_gene(results: Iterator[Result]) -> Iterator[Dict[str, Result]]:
+def group_by_gene(results: Iterable[Result]) -> Iterable[Dict[str, Result]]:
     ''' group result lines by gene (come sorted in results file)
     '''
     for gene, group in groupby(results, key=lambda x: x.symbol):
         yield {x.consequence: x for x in group}
 
-def filter_by_p_value(genes: Iterator[Dict[str, Result]], threshold=1, cq='del') -> Iterator[Dict[str, Result]]:
+def filter_by_p_value(genes: Iterable[Dict[str, Result]], threshold=1, cq='del') -> Iterable[Dict[str, Result]]:
     ''' filter genes by p-value (includes everything by default)
     
     Args:
@@ -147,7 +147,7 @@ def get_gene_coords(gencode: Gencode, symbol: str):
     tss_pos = tx.cds_start if tx.strand == '+' else tx.end
     return {'chrom': chrom, 'pos': mid_pos, 'tss_pos': tss_pos}
 
-def annotate_coords(genes: Iterator[Dict[str, Result]], gencode: Gencode) -> Iterator[Dict[str, Result]]:
+def annotate_coords(genes: Iterable[Dict[str, Result]], gencode: Gencode) -> Iterable[Dict[str, Result]]:
     ''' annotate each gene result with chrom, pos and tss_pos via gencode
     '''
     for result in genes:
@@ -212,7 +212,7 @@ def save_model(gene_models, model_path):
         json.dump(models, handle, indent=4)
 
 def select_variants(conn: sqlite3.Connection, gene: Dict, cq_type: str, 
-                    score_type: str, max_af: float, exome_samples: Set[int]):
+                    score_type: str, max_af: float, exome_samples: Set[int]) -> Iterable[Variant]:
     ''' find variants for a gene for rare variant PRS
     
     Args:
@@ -241,12 +241,12 @@ def get_af(variant: Variant, samples: Set[int]):
     ac, an = get_ac_and_an(variant, samples)
     return ac / an
 
-def af_threshold(variants: Iterator[Variant], samples: Set[int]):
+def af_threshold(variants: Iterable[Variant], samples: Set[int]):
     ''' find highest AF within variants given samples for a population
     '''
     return max(get_af(x, samples) for x in variants)
 
-def ac_threshold(variants: Iterator[Variant], samples: Set[int]):
+def ac_threshold(variants: Iterable[Variant], samples: Set[int]):
     ''' find highest AC within variants given samples for a population
     '''
     return max(get_ac_and_an(x, samples)[0] for x in variants)
@@ -262,7 +262,7 @@ class prune_by_ancestry_af:
         filtering in different datasets.
         '''
     def __init__(self, 
-                 variants: Iterator[Variant],
+                 variants: Iterable[Variant],
                  sample_ids: Set[int],
                  ancestries: Dict[str, Set[int]],
                  ac_thresh: int=None,
@@ -571,8 +571,6 @@ def main():
     test_samples = set()
     if args.test_samples is not None:
         test_samples = set(int(x) for x in open_sample_subset(args.test_samples))
-    
-    print(test_samples)
     
     ancestries = {}
     if args.ancestry_samples is not None:
