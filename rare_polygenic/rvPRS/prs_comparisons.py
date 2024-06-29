@@ -1,8 +1,10 @@
 
 import gzip
 import logging
+from pathlib import Path
+from typing import Set
 
-def open_sample_subset(path, sep='\t'):
+def open_sample_subset(path: Path, sep='\t') -> Set[str]:
     ''' open file containing sample IDs to subset by
     '''
     # define set of header values (by priority). We use these to check if file

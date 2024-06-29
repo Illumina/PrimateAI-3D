@@ -4,14 +4,14 @@
 import numpy
 import scipy
 
-def rank_to_normal(rank, c, n):
+def rank_to_normal(rank: numpy.ndarray, c: float, n: int) -> numpy.ndarray:
     ''' convert ranks to normal distribution
     '''
     # Standard quantile function
     x = (rank - c) / (n - 2 * c + 1)
     return scipy.stats.norm.ppf(x).astype(numpy.float32)
 
-def inverse_rank_normalize(arr, c=3.0 / 8, stochastic=True):
+def inverse_rank_normalize(arr: numpy.ndarray, c=3.0 / 8, stochastic=True) -> numpy.ndarray:
     """ Perform rank-based inverse normal transformation on numpy array.
         If stochastic is True ties are given rank randomly, otherwise ties will
         share the same value. NaN values are ignored.

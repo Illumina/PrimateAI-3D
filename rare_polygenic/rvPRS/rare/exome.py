@@ -1,9 +1,11 @@
 
 import logging
+import sqlite3
+from typing import Iterable
 
 from rvPRS.rare.variant import Variant
 
-def unique_genes(conn):
+def unique_genes(conn: sqlite3.Connection) -> Iterable[str]:
     ''' get unique gene symbols
     
     Args:
@@ -17,7 +19,7 @@ def unique_genes(conn):
     for symbol in conn.execute(query):
         yield symbol[0]
 
-def variants_for_gene(conn, symbol, score_col='primateai', max_af=0.001):
+def variants_for_gene(conn: sqlite3.Connection, symbol: str, score_col='primateai', max_af=0.001) -> Iterable[Variant]:
     ''' pull rows matching a single gene symbol
     
     Args:
@@ -36,14 +38,14 @@ def variants_for_gene(conn, symbol, score_col='primateai', max_af=0.001):
     for var in conn.execute(query, params):
         yield Variant(*var)
 
-def get_exome_samples(conn):
+def get_exome_samples(conn: sqlite3.Connection) -> Iterable[str]:
     ''' find sample IDs for samples with exome data
     '''
     query = '''SELECT * from samples'''
     for x in conn.execute(query):
         yield x[0]
 
-def count_exome_samples(conn):
+def count_exome_samples(conn: sqlite3.Connection) -> int:
     ''' count the number of exome samples
     '''
     query = '''SELECT count(rowid) from samples'''

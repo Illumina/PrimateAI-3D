@@ -1,5 +1,9 @@
 
-def in_gencode(gencode, symbol):
+from typing import Dict, Iterable
+
+from gencodegenes import Gencode, Transcript
+
+def in_gencode(gencode: Gencode, symbol: str) -> bool:
     ''' check if a gene symbol is present in gencode
     
     This assumes gene symbol annotations came from gencode, and uses the same 
@@ -11,7 +15,7 @@ def in_gencode(gencode, symbol):
     '''
     return symbol in gencode
 
-def is_coding(gencode, symbol):
+def is_coding(gencode: Gencode, symbol: str) -> bool:
     ''' check if the canonical transcript of a gene is protein-coding
     
     Args:
@@ -20,7 +24,7 @@ def is_coding(gencode, symbol):
     '''
     return gencode[symbol].canonical.type == 'protein_coding'
 
-def cds_overlap(tx1, tx2, window=50):
+def cds_overlap(tx1: Transcript, tx2: Transcript, window=50) -> bool:
     ''' check if the CDS regions of two transcripts overlap
     
     We expand each CDS regions by 50 bp on each side by default, in order to
@@ -44,7 +48,7 @@ def cds_overlap(tx1, tx2, window=50):
                 return True
     return False
 
-def filter_overlapping(gencode, rare_genes):
+def filter_overlapping(gencode: Gencode, rare_genes: Iterable[Dict]) -> Iterable[Dict]:
     ''' drop genes which overlap more significant genes
     
     This deduplicates overlapping genes by picking the most significant only.
@@ -63,7 +67,7 @@ def filter_overlapping(gencode, rare_genes):
             included.add(rare['del'].symbol)
             yield rare
 
-def filter_by_gencode(gencode, rare_genes):
+def filter_by_gencode(gencode: Gencode, rare_genes: Iterable[Dict]) -> Iterable[Dict]:
     ''' drop rare genes if they are not protein coding, or overlap a more significant gene
     
     Args:

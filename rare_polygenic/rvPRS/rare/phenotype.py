@@ -2,12 +2,13 @@
 '''
 
 import gzip
+from io import TextIOWrapper
 import logging
 import math
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Dict, Iterable, Tuple
 
-def open_file(path, sep='\t'):
+def open_file(path: Path, sep='\t') -> Tuple[Dict[str, int], TextIOWrapper]:
     ''' open a csv/tsv file and return header dict plus file handle
     '''
     opener = gzip.open if str(path).endswith('gz') else open
@@ -16,7 +17,7 @@ def open_file(path, sep='\t'):
     indices = {k: i for i, k in enumerate(header)}
     return indices, handle
 
-def get_phenotypes(path: Path, column: str, samples=None) -> Iterable[Tuple[str, str]]:
+def get_phenotypes(path: Path, column: str, samples=None) -> Iterable[Tuple[str, float]]:
     ''' get values for one phenotype from phenotype database
     
     Args:
