@@ -49,7 +49,11 @@ def get_lines(path: Path) -> Iterable[Result]:
             beta = line[header['beta']]
             p_value = line[header['p_value']]
             ac_threshold = line[header['ac_threshold']]
-            pathogenicity_threshold = line[header['pathogenicity_threshold']]
+            try:
+                pathogenicity_threshold = line[header['pathogenicity_threshold']]
+            except KeyError:
+                # fix for older column name
+                pathogenicity_threshold = line[header['primate_ai_threshold']]
             yield Result(symbol, consequence, beta, p_value, ac_threshold, pathogenicity_threshold)
 
 def group_by_gene(results: Iterable[Result]) -> Iterable[Dict[str, Result]]:
