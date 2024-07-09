@@ -134,7 +134,10 @@ def get_af(variant: Variant, samples: Set[int]):
     ''' get allele frequency for variant among a set of samples
     '''
     ac, an = get_ac_and_an(variant, samples)
-    return ac / an
+    try:
+        return ac / an
+    except ZeroDivisionError:
+        return 1
 
 def af_threshold(variants: Iterable[Variant], samples: Set[int]):
     ''' find highest AF within variants given samples for a population
