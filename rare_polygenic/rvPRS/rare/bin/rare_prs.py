@@ -478,8 +478,9 @@ def main():
     if args.test_samples is not None:
         test_samples = set(int(x) for x in open_sample_subset(args.test_samples))
     
-    ancestries = {}
+    ancestries = None
     if args.ancestry_samples is not None:
+        ancestries = {}
         for i, path in enumerate(args.ancestry_samples):
             samples = set(int(x) for x in open_sample_subset(path))
             ensure_no_subset_overlap(samples, test_samples)
