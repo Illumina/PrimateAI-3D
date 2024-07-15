@@ -147,7 +147,10 @@ def af_threshold(variants: Iterable[Variant], samples: Set[int]):
 def ac_threshold(variants: Iterable[Variant], samples: Set[int]):
     ''' find highest AC within variants given samples for a population
     '''
-    return max(get_ac_and_an(x, samples)[0] for x in variants)
+    try:
+        return max(get_ac_and_an(x, samples)[0] for x in variants)
+    except ValueError:
+        return 0
 
 class prune_by_ancestry_af:
     ''' select variants with low AF within the ancestry specific samples
