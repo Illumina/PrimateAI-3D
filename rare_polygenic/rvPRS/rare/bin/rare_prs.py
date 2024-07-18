@@ -11,7 +11,7 @@ import sys
 from typing import Dict, Iterable, Set
 
 import numpy
-from fisher import pvalue as fisher_exact
+from scipy.stats import fisher_exact
 from gencodegenes import Gencode
 
 from rvPRS.rare.variant import Variant
@@ -220,8 +220,8 @@ class prune_by_ancestry_af:
                 for x in self.ancestries:
                     # check if the ancestry AF significantly exceeds the training AF
                     ac, an = get_ac_and_an(variant, self.ancestries[x])
-                    pval = fisher_exact(self.ac_thresh, (len(self.sample_ids) * 2) - self.ac_thresh,
-                                        ac, an - ac).left_tail
+                    pval = fisher_exact([self.ac_thresh, (len(self.sample_ids) * 2) - self.ac_thresh],
+                                        [ac, an - ac], alternative='left-sided').pvalue
                     p_values[x] = pval
 
             if min(p_values.values()) < 0.05:
