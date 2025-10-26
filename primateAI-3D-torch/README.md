@@ -6,7 +6,7 @@ This model annotates human missense variants with their predicted effect on prot
 PrimateAI-3D source code included in this repository is provided under the PolyForm Strict License 1.0.0. PrimateAI-3D includes several third party packages TODO provided under other open source licenses, please see NOTICE for additional details. All data in the data package is provided under the CC BY NC 4.0 license for academic and non-commercial use; other use requires a commercial license from Illumina, Inc.
 
 ## Data package
-The data package is available [here](https://ilmn-my.sharepoint.com/:u:/g/personal/thamp_illumina_com/EbBe877iGXxNrr4BpTCMdJgBkp1PvtZclmQX38Epaqp6xg?e=7Om5VJ).
+The data package is available here.
 It includes the precomputed scores for PrimateAI-3D trained with human and/or primate variants, model weights and all input and output data needed to train PrimateAI-3D models.
 
 ### Precomputed scores
