@@ -8,7 +8,7 @@ PrimateAI-3D scores are freely available for download for academic, non-profit r
 [Please click here to accept the academic license agreement](https://illumina2.na1.adobesign.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhDaZSRjhLd-Jumb12j-ihAbO0vBakcvXgS2MpkFnF_VJXWW4J_DBF5yDTCzOQJ8zrU*)
 
 
-This repository contains three subfolders:
+This repository contains the following subfolders:
  - ~~primateAI-3D: code for the Primate-3D deep learning model~~ (deprecated, use primateAI-3D-torch)
  - primateAI-3D-torch: code for the Primate-3D deep learning model
  - burden_tests: code for rare variant burden tests
