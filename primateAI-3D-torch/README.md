@@ -1,12 +1,9 @@
 # PrimateAI-3D Torch
 
-This model annotates human missense variants with their predicted effect on protein function (pathogenicity), as described in [H. Gao, T. Hamp, K. K. Farh et al. Science (2023)](https://www.science.org/doi/10.1126/science.abn8197) and [D. Parry, T. Bosc, T. Hamp, K. K. Farh et al. medRxiv (2024)](https://www.medrxiv.org/content/10.1101/2024.01.12.24301193v1). The annotations for all possible missense variants together with all data needed to train and evaluate PrimateAI-3D are included in the data package. To download the data package, please complete the [license agreement](https://illumina2.na1.adobesign.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhDaZSRjhLd-Jumb12j-ihAbO0vBakcvXgS2MpkFnF_VJXWW4J_DBF5yDTCzOQJ8zrU*); the download link will be shared via email shortly after submission. The data package is free for academic and not-for-profit use; other use requires a commercial license from Illumina, Inc.
+This model annotates human missense variants with their predicted effect on protein function (pathogenicity), as described in [H. Gao, T. Hamp, K. K. Farh et al. Science (2023)](https://www.science.org/doi/10.1126/science.abn8197) and [D. Parry, T. Bosc, T. Hamp, K. K. Farh et al. medRxiv (2024)](https://www.medrxiv.org/content/10.1101/2024.01.12.24301193v1). All data needed to train and evaluate PrimateAI-3D are included in the data package. To download the data package, please complete the [license agreement](https://illumina2.na1.adobesign.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhDaZSRjhLd-Jumb12j-ihAbO0vBakcvXgS2MpkFnF_VJXWW4J_DBF5yDTCzOQJ8zrU*); the download link will be shared via email shortly after submission. The data package is free for academic and not-for-profit use; other use requires a commercial license from Illumina, Inc.
 
 ## Data package
-Please see above for downloading the data package. It includes the precomputed scores for PrimateAI-3D, model weights and all input and output data needed to train PrimateAI-3D models.
-
-### Precomputed scores
-`pai_scores/pai3d.ensPrim.orig.csv` has scores for PrimateAI-3D trained with primate variants. They are the same as those published in the [PrimateAI-3D paper](https://www.science.org/doi/10.1126/science.abn8197) with some longer structures added.
+Please see above for downloading the data package. It includes model weights and all input and output data needed to train PrimateAI-3D models.
 
 ### Other files and folders in `pai_trainAndEvalData`
 - `evaluation`: clinical and deep mutagenesis assay evaluation data; used in notebook `./notebooks/evalScores.ipynb` (this repo).
@@ -47,7 +44,7 @@ python ./modules/worker.py --json_conf=<configFilePath> --datafolder=<dataFolder
 `<runFolderPath>` is the folder where log and output files will be saved .
 
 ## Evaluation
-Notebook `./notebooks/evalScores.ipynb` (this repo) performs an evaluation of the precomputed PrimateAI-3D scores.
+Notebook `./notebooks/evalScores.ipynb` (this repo) performs an evaluation of the original precomputed PrimateAI-3D scores.
 
 ## Contact
 thamp@illumina.com
