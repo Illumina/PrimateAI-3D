@@ -9,7 +9,8 @@ PrimateAI-3D scores are freely available for download for academic, non-profit r
 
 
 This repository contains three subfolders:
- - primateAI-3D: code for the Primate-3D deep learning model
+ - ~~primateAI-3D: code for the Primate-3D deep learning model~~ (deprecated, use primateAI-3D-torch)
+ - primateAI-3D-torch: code for the Primate-3D deep learning model
  - burden_tests: code for rare variant burden tests
  - rare_polygenic: code for rare variant polygenic scores
  - shet_estimation: code for Primate-3D based selection coefficient estimation
