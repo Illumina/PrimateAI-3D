@@ -3,14 +3,10 @@
 This model annotates human missense variants with their predicted effect on protein function (pathogenicity), as described in [H. Gao, T. Hamp, K. K. Farh et al. Science (2023)](https://www.science.org/doi/10.1126/science.abn8197) and [D. Parry, T. Bosc, T. Hamp, K. K. Farh et al. medRxiv (2024)](https://www.medrxiv.org/content/10.1101/2024.01.12.24301193v1). The annotations for all possible missense variants together with all data needed to train and evaluate PrimateAI-3D are included in the data package. To download the data package, please complete the [license agreement](https://illumina2.na1.adobesign.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhDaZSRjhLd-Jumb12j-ihAbO0vBakcvXgS2MpkFnF_VJXWW4J_DBF5yDTCzOQJ8zrU*); the download link will be shared via email shortly after submission. The data package is free for academic and not-for-profit use; other use requires a commercial license from Illumina, Inc.
 
 ## Data package
-Please see above for downloading the data package. It includes the precomputed scores for PrimateAI-3D trained with human and/or primate variants, model weights and all input and output data needed to train PrimateAI-3D models.
+Please see above for downloading the data package. It includes the precomputed scores for PrimateAI-3D, model weights and all input and output data needed to train PrimateAI-3D models.
 
 ### Precomputed scores
-File `pai_scores/pai3d.ensPrimAndHum.csv.gz` has scores for PrimateAI-3D trained with both primate and human variants (evaluated in [PrimateAI-3D outperforms AlphaMissense in real-world cohorts](https://www.medrxiv.org/content/10.1101/2024.01.12.24301193v1)).
-
 `pai_scores/pai3d.ensPrim.orig.csv` has scores for PrimateAI-3D trained with primate variants. They are the same as those published in the [PrimateAI-3D paper](https://www.science.org/doi/10.1126/science.abn8197) with some longer structures added.
-
-`pai_scores/pai3d.ensHum.csv` has scores of PrimateAI-3D trained with human variants (introduced in [PrimateAI-3D outperforms AlphaMissense in real-world cohorts](https://www.medrxiv.org/content/10.1101/2024.01.12.24301193v1)). These scores are ensembles of 10 different PrimateAI-3D base models which are reproducible with files in `pai_trainAndEvalData/human_singlemodels/`: `human_singlemodels/conf` has the config files for training (below); `human_singlemodels/weights` has the model weights created during training for each epoch and model; `human_singlemodels/scores` has the precomputed individual model output scores (saved after each epoch). Notebook `./notebooks/evalScores.ipynb` (from this repo) shows how to combine and evaluate the individual precomputed scores.
 
 ### Other files and folders in `pai_trainAndEvalData`
 - `evaluation`: clinical and deep mutagenesis assay evaluation data; used in notebook `./notebooks/evalScores.ipynb` (this repo).
@@ -51,7 +47,7 @@ python ./modules/worker.py --json_conf=<configFilePath> --datafolder=<dataFolder
 `<runFolderPath>` is the folder where log and output files will be saved .
 
 ## Evaluation
-Notebook `./notebooks/evalScores.ipynb` (this repo) performs an evaluation of the precomputed PrimateAI-3D scores included in `pai_trainAndEvalData/human_singlemodels/scores` and `pai_scores`.
+Notebook `./notebooks/evalScores.ipynb` (this repo) performs an evaluation of the precomputed PrimateAI-3D scores.
 
 ## Contact
 thamp@illumina.com
