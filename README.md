@@ -3,10 +3,10 @@
 PrimateAI-3D scores and primate and human constraint are available at the PrimateAI-3D browser: 
 https://primateai3d.basespace.illumina.com/
 
-
 PrimateAI-3D scores are freely available for download for academic, non-profit research.  
 [Please click here to accept the academic license agreement](https://illumina2.na1.adobesign.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhDaZSRjhLd-Jumb12j-ihAbO0vBakcvXgS2MpkFnF_VJXWW4J_DBF5yDTCzOQJ8zrU*)
 
+Purchase of AI scores and models for commercial use is available at AI_licensing@illumina.com and will be delivered as a package through Illumina Connected Analytics software.
 
 This repository contains the following subfolders:
  - ~~primateAI-3D: code for the Primate-3D deep learning model~~ (deprecated, use primateAI-3D-torch)
